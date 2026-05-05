@@ -1,0 +1,118 @@
+# ─── Jireh Agent Configuration ────────────────────────────────────────────────
+# Central config for all agents. Override via .env for secrets.
+
+system:
+  name: Jireh
+  version: "0.1.0"
+  timezone: Asia/Kolkata
+  log_level: INFO
+  log_file: logs/jireh.log
+  db_path: db/jireh.db
+
+# ─── Schedule ─────────────────────────────────────────────────────────────────
+schedule:
+  scout_start: "05:00"       # IST — jireh-scout wakes up
+  apply_deadline: "09:15"    # IST — hard cutoff for all submissions
+  reporter_send: "09:30"     # IST — daily digest sent
+  scout_interval_minutes: 30 # re-check for new postings every 30 min until deadline
+
+# ─── LLM ──────────────────────────────────────────────────────────────────────
+llm:
+  provider: ollama
+  base_url: http://localhost:11434
+  scorer_model: llama3.2        # fast, lightweight — used for scoring
+  tailor_model: llama3.1:8b    # smarter — used for resume/cover-letter rewriting
+  temperature: 0.3
+
+# ─── jireh-scout ──────────────────────────────────────────────────────────────
+scout:
+  enabled: true
+  platforms:
+    - linkedin
+    - naukri
+    - greenhouse
+    - lever
+    - indeed
+  keywords:
+    - "Senior QE Manager"
+    - "Lead QE"
+    - "QA Manager"
+    - "Quality Engineering Manager"
+    - "Director Quality Assurance"
+    - "Head of Quality Engineering"
+    - "VP Quality"
+    - "Engineering Manager QA"
+  locations:
+    - "Hyderabad"
+    - "Remote"
+    - "India Remote"
+  exclude_keywords:
+    - "fresher"
+    - "0-2 years"
+    - "junior"
+    - "associate"
+  max_jobs_per_run: 100
+  deduplicate: true  # skip already-seen job IDs
+
+# ─── jireh-scorer ─────────────────────────────────────────────────────────────
+scorer:
+  enabled: true
+  score_range: [0, 100]
+  path_b_threshold: 72     # auto-apply if score >= this
+  path_a_threshold: 60     # add to human queue if score >= this
+  below_threshold_action: skip
+  scoring_weights:
+    experience_match: 0.30
+    skills_match: 0.35
+    domain_match: 0.20
+    seniority_match: 0.15
+
+# ─── jireh-tailor ─────────────────────────────────────────────────────────────
+tailor:
+  enabled: true
+  resume_template_path_a: resources/resumes/resume_path_a.md
+  resume_template_path_b: resources/resumes/resume_path_b.md
+  cover_letter_template_path_a: resources/templates/cover_letter_path_a.md
+  cover_letter_template_path_b: resources/templates/cover_letter_path_b.md
+  output_dir: resources/resumes/tailored/
+  max_resume_words: 800
+  include_cover_letter: true
+
+# ─── jireh-apply ──────────────────────────────────────────────────────────────
+apply:
+  enabled: true
+  # When false, logs actions but does not actually submit (dry-run)
+  live_mode: true
+  browser: chromium
+  headless: true
+  slow_mo_ms: 50           # slight delay between actions to appear human-like
+  timeout_ms: 30000
+  retry_attempts: 2
+  on_captcha: skip_and_flag  # options: skip_and_flag | pause_for_human | abort
+
+# ─── jireh-reporter ───────────────────────────────────────────────────────────
+reporter:
+  enabled: true
+  channels:
+    - telegram
+    - email
+  include_sections:
+    - summary_stats
+    - path_a_queue      # jobs needing human approval
+    - path_b_applied    # auto-submitted applications
+    - skipped_jobs      # flagged for CAPTCHA / low score
+    - encouragement     # daily scripture / affirmation
+
+# ─── jireh-voice ──────────────────────────────────────────────────────────────
+voice:
+  whisper_model: base      # tiny (75MB/fast) | base (145MB) | small (460MB/accurate)
+  tts_rate: 170            # words per minute for text-to-speech
+  silence_threshold: 0.015 # RMS amplitude below this = silence
+  silence_secs: 1.5        # seconds of silence after speech to stop recording
+
+# ─── jireh-vault ──────────────────────────────────────────────────────────────
+vault:
+  credential_backend: keyring  # options: keyring | env | aws_secrets
+  session_dir: resources/credentials/sessions/
+  rotate_sessions: true
+  max_session_age_hours: 24

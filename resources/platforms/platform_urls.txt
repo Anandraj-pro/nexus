@@ -1,0 +1,11 @@
+# ─── Jireh Platform URLs ──────────────────────────────────────────────────────
+# Format: PLATFORM_NAME|BASE_URL|SEARCH_URL_TEMPLATE|API_SUPPORTED
+# {query} and {location} are replaced at runtime by jireh-scout.
+
+LINKEDIN|https://www.linkedin.com|https://www.linkedin.com/jobs/search/?keywords={query}&location={location}&f_TPR=r86400|false
+NAUKRI|https://www.naukri.com|https://www.naukri.com/{query}-jobs-in-{location}|false
+INDEED|https://in.indeed.com|https://in.indeed.com/jobs?q={query}&l={location}&fromage=1|false
+GREENHOUSE|https://boards.greenhouse.io|https://boards.greenhouse.io/embed/job_board?q={query}|true
+LEVER|https://jobs.lever.co|https://api.lever.co/v0/postings?mode=json&team=Engineering|true
+WELLFOUND|https://wellfound.com|https://wellfound.com/jobs?role={query}&location={location}|false
+INSTAHYRE|https://www.instahyre.com|https://www.instahyre.com/search-jobs/?q={query}&l={location}|false

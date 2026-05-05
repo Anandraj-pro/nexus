@@ -1,0 +1,190 @@
+# ─── Jireh Skills Profile ─────────────────────────────────────────────────────
+# This file is the single source of truth for the Scorer and Tailor agents.
+# Rate each skill 1–10. The Scorer weights these against JD requirements.
+# Updated: 2026-04-26
+
+profile:
+  name: Ananda Raju Pandiri
+  title: Senior QE Manager / Director of Quality Engineering
+  location: Hyderabad, India
+  experience_years: 17
+
+  timezone: Asia/Kolkata
+  email: anandrajpandiri@gmail.com
+
+summary: >
+  17-year QE leader with a track record of building automation-first quality
+  engineering organizations in fintech, enterprise SaaS, and consumer platforms.
+  Proven at scaling QA teams from scratch, driving CI/CD maturity, and aligning
+  quality strategy with business outcomes.
+
+# ─── Leadership & Strategy ────────────────────────────────────────────────────
+leadership:
+  qa_org_building:
+    rating: 9
+    keywords: ["team building", "hiring", "QA org", "quality engineering org"]
+  qa_strategy:
+    rating: 9
+    keywords: ["quality strategy", "test strategy", "QA roadmap"]
+  stakeholder_management:
+    rating: 8
+    keywords: ["stakeholder", "C-suite", "executive reporting", "OKR"]
+  cross_functional_leadership:
+    rating: 9
+    keywords: ["cross-functional", "product", "engineering", "PM alignment"]
+  budget_headcount:
+    rating: 7
+    keywords: ["budget", "headcount", "resource planning"]
+  agile_scrum:
+    rating: 9
+    keywords: ["agile", "scrum", "sprint", "SAFe", "kanban"]
+
+# ─── QA Engineering ───────────────────────────────────────────────────────────
+qa_engineering:
+  test_automation_architecture:
+    rating: 10
+    keywords: ["automation architecture", "test framework", "automation strategy"]
+  api_testing:
+    rating: 9
+    keywords: ["API testing", "REST", "GraphQL", "Postman", "contract testing"]
+  ui_automation:
+    rating: 8
+    keywords: ["UI automation", "Selenium", "Playwright", "Cypress", "WebDriver"]
+  performance_testing:
+    rating: 7
+    keywords: ["performance testing", "load testing", "JMeter", "k6", "Gatling"]
+  security_testing:
+    rating: 6
+    keywords: ["security testing", "OWASP", "penetration testing", "SAST", "DAST"]
+  mobile_testing:
+    rating: 6
+    keywords: ["mobile testing", "iOS", "Android", "Appium", "XCUITest"]
+  accessibility_testing:
+    rating: 6
+    keywords: ["accessibility", "WCAG", "a11y", "screen reader"]
+  exploratory_testing:
+    rating: 9
+    keywords: ["exploratory testing", "session-based", "charter-based"]
+  shift_left:
+    rating: 9
+    keywords: ["shift-left", "TDD", "BDD", "ATDD", "early quality"]
+
+# ─── CI/CD & DevOps ───────────────────────────────────────────────────────────
+cicd_devops:
+  cicd_pipeline:
+    rating: 9
+    keywords: ["CI/CD", "pipeline", "continuous integration", "continuous delivery"]
+  github_actions:
+    rating: 8
+    keywords: ["GitHub Actions", "workflow", "YAML pipeline"]
+  jenkins:
+    rating: 8
+    keywords: ["Jenkins", "Jenkinsfile", "pipeline as code"]
+  docker:
+    rating: 7
+    keywords: ["Docker", "containerization", "Docker Compose"]
+  kubernetes:
+    rating: 5
+    keywords: ["Kubernetes", "K8s", "Helm", "pod"]
+  aws:
+    rating: 6
+    keywords: ["AWS", "S3", "Lambda", "CloudWatch", "ECS"]
+  azure_devops:
+    rating: 7
+    keywords: ["Azure DevOps", "Azure Pipelines", "ADO"]
+
+# ─── Domains ──────────────────────────────────────────────────────────────────
+domains:
+  fintech:
+    rating: 9
+    keywords: ["fintech", "payments", "banking", "lending", "compliance", "PCI-DSS"]
+  enterprise_saas:
+    rating: 8
+    keywords: ["enterprise SaaS", "B2B", "multi-tenant", "SLA"]
+  consumer_apps:
+    rating: 7
+    keywords: ["consumer", "B2C", "mobile app", "high-traffic"]
+  healthcare:
+    rating: 4
+    keywords: ["healthcare", "HIPAA", "HL7", "medical device"]
+  ecommerce:
+    rating: 6
+    keywords: ["ecommerce", "checkout", "cart", "marketplace"]
+
+# ─── Tools & Platforms ────────────────────────────────────────────────────────
+tools:
+  selenium:
+    rating: 9
+    keywords: ["Selenium", "WebDriver", "Selenium Grid"]
+  playwright:
+    rating: 8
+    keywords: ["Playwright", "browser automation"]
+  pytest:
+    rating: 9
+    keywords: ["pytest", "Python testing", "fixtures"]
+  testng:
+    rating: 7
+    keywords: ["TestNG", "Java testing"]
+  jira:
+    rating: 9
+    keywords: ["Jira", "issue tracking", "bug management"]
+  confluence:
+    rating: 8
+    keywords: ["Confluence", "documentation", "wiki"]
+  postman:
+    rating: 8
+    keywords: ["Postman", "API client", "Newman"]
+  splunk:
+    rating: 6
+    keywords: ["Splunk", "log analysis", "observability"]
+  grafana:
+    rating: 5
+    keywords: ["Grafana", "dashboards", "metrics"]
+  testrail:
+    rating: 7
+    keywords: ["TestRail", "test management", "test cases"]
+
+# ─── Programming Languages ────────────────────────────────────────────────────
+languages:
+  python:
+    rating: 8
+    keywords: ["Python", "scripting", "automation"]
+  java:
+    rating: 7
+    keywords: ["Java", "OOP", "Maven", "Gradle"]
+  javascript:
+    rating: 6
+    keywords: ["JavaScript", "TypeScript", "Node.js"]
+  sql:
+    rating: 8
+    keywords: ["SQL", "database testing", "query", "PostgreSQL", "MySQL"]
+  bash:
+    rating: 6
+    keywords: ["bash", "shell scripting", "Linux"]
+
+# ─── Soft Skills ──────────────────────────────────────────────────────────────
+soft_skills:
+  communication:
+    rating: 9
+    keywords: ["communication", "presentation", "executive", "stakeholder"]
+  mentoring:
+    rating: 9
+    keywords: ["mentoring", "coaching", "career development", "1:1"]
+  hiring:
+    rating: 8
+    keywords: ["hiring", "interviewing", "talent acquisition", "sourcing"]
+  vendor_management:
+    rating: 7
+    keywords: ["vendor", "third-party", "outsourcing", "offshore"]
+
+# ─── Target preferences ───────────────────────────────────────────────────────
+# Used by Scorer to boost/suppress based on fit
+preferences:
+  preferred_domains: ["fintech", "enterprise_saas", "consumer_apps"]
+  avoided_domains: []
+  preferred_company_size: ["startup", "mid-size", "enterprise"]
+  remote_ok: true
+  relocation_ok: false
+  notice_period_days: 30
+  expected_ctc_range_lpa: [40, 80]
+  preferred_locations: ["Hyderabad", "Remote"]
