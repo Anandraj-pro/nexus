@@ -8,6 +8,8 @@ from __future__ import annotations
 import io
 import json
 import re
+import subprocess
+import sys
 from itertools import groupby
 from pathlib import Path
 
@@ -16,12 +18,14 @@ import yaml
 
 ROOT = Path(__file__).parent.parent
 
-AGENT_CONFIG    = ROOT / "resources" / "config" / "agent_config.yaml"
+AGENT_CONFIG      = ROOT / "resources" / "config" / "agent_config.yaml"
 CAREER_PATHS_FILE = ROOT / "resources" / "config" / "career_paths.yaml"
-SKILLS_FILE     = ROOT / "resources" / "skills" / "skills_profile.yaml"
-RESUME_A        = ROOT / "resources" / "resumes" / "resume_path_a.md"
-RESUME_B        = ROOT / "resources" / "resumes" / "resume_path_b.md"
-ENV_FILE        = ROOT / ".env"
+SKILLS_FILE       = ROOT / "resources" / "skills" / "skills_profile.yaml"
+RESUME_A          = ROOT / "resources" / "resumes" / "resume_path_a.md"
+RESUME_B          = ROOT / "resources" / "resumes" / "resume_path_b.md"
+UPLOADED_DIR      = ROOT / "resources" / "resumes" / "uploaded"
+ENV_FILE          = ROOT / ".env"
+DB_PATH           = ROOT / "db" / "nexus.db"
 
 
 # ── I/O helpers ────────────────────────────────────────────────────────────────
@@ -54,7 +58,7 @@ def _read_env() -> dict:
 
 def _write_env(env: dict) -> None:
     SECTIONS = [
-        ("Job Platforms",    ["NAUKRI_EMAIL", "NAUKRI_PASSWORD"]),
+        ("Job Platforms",    ["NAUKRI_EMAIL", "NAUKRI_PASSWORD", "LINKEDIN_EMAIL", "LINKEDIN_PASSWORD"]),
         ("Notifications",    ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID",
                                "GMAIL_SENDER", "GMAIL_RECIPIENT",
                                "GMAIL_CREDENTIALS_PATH", "GMAIL_TOKEN_PATH"]),
@@ -110,6 +114,33 @@ def _extract_resume_text(uploaded_file) -> str:
         return raw.decode("utf-8", errors="ignore")
 
     st.warning("Unsupported file type — upload PDF, DOCX, or Markdown.")
+    return ""
+
+
+def _extract_resume_text_bytes(filename: str, raw: bytes) -> str:
+    """Same as _extract_resume_text but accepts raw bytes directly."""
+    name = filename.lower()
+    if name.endswith(".pdf"):
+        try:
+            import pdfplumber
+            parts: list[str] = []
+            with pdfplumber.open(io.BytesIO(raw)) as pdf:
+                for page in pdf.pages:
+                    t = page.extract_text()
+                    if t:
+                        parts.append(t)
+            return "\n".join(parts)
+        except Exception:
+            return ""
+    if name.endswith(".docx"):
+        try:
+            import docx
+            doc = docx.Document(io.BytesIO(raw))
+            return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+        except Exception:
+            return ""
+    if name.endswith((".md", ".txt")):
+        return raw.decode("utf-8", errors="ignore")
     return ""
 
 
@@ -170,19 +201,86 @@ def _parse_with_ollama(text: str) -> dict:
     return {}
 
 
+_TITLE_KEYWORDS = re.compile(
+    r"\b(manager|director|vp|vice president|head|lead|engineer|executive|"
+    r"consultant|architect|specialist|analyst|officer|president)\b",
+    re.IGNORECASE,
+)
+_INDIAN_CITIES = re.compile(
+    r"\b(hyderabad|bangalore|bengaluru|mumbai|pune|chennai|delhi|noida|"
+    r"gurugram|gurgaon|kolkata|ahmedabad|kochi|remote)\b",
+    re.IGNORECASE,
+)
+
+
 def _parse_with_regex(text: str) -> dict:
     result: dict = {}
+    lines = [l.strip().lstrip("#*").strip() for l in text.splitlines() if l.strip()]
+
+    # ── Email ──────────────────────────────────────────────────────────────────
     if m := re.search(r"[\w.+\-]+@[\w\-]+\.[a-zA-Z]{2,}", text):
         result["email"] = m.group()
+
+    # ── Phone ──────────────────────────────────────────────────────────────────
     if m := re.search(r"(\+\d[\d\s\-]{8,15})", text):
         result["phone"] = m.group().strip()
+
+    # ── Experience years ───────────────────────────────────────────────────────
     if m := re.search(r"(\d{1,2})[\s\-]year", text, re.IGNORECASE):
         result["experience_years"] = int(m.group(1))
-    for line in text.splitlines():
-        line = line.strip().lstrip("#").strip()
-        if line and not re.search(r"[@|/\\]", line) and 1 < len(line.split()) <= 6:
+
+    # ── Name — first short non-contact line ───────────────────────────────────
+    for line in lines[:6]:
+        if not re.search(r"[@|/\\+]", line) and 1 < len(line.split()) <= 6:
             result["name"] = line
             break
+
+    # ── Title — line near top that contains a title keyword ───────────────────
+    for line in lines[:10]:
+        if (
+            _TITLE_KEYWORDS.search(line)
+            and not re.search(r"[@]", line)
+            and 2 <= len(line.split()) <= 10
+            and line != result.get("name", "")
+        ):
+            result["title"] = line.strip("*").strip()
+            break
+
+    # ── Location — line with a known city name ─────────────────────────────────
+    for line in lines[:15]:
+        if _INDIAN_CITIES.search(line) and not re.search(r"@.*@", line):
+            # Extract "City, Country" part before any pipe / bullet / email
+            loc_part = re.split(r"[|·•]", line)[0].strip()
+            # Strip trailing email/phone leftovers
+            loc_part = re.split(r"\s{2,}|\s*[|]", loc_part)[0].strip()
+            if loc_part and len(loc_part) < 40:
+                result["location"] = loc_part
+            # Preferred locations: collect all city/remote mentions across whole line
+            cities = _INDIAN_CITIES.findall(line)
+            locs = [c.title() for c in dict.fromkeys(c.lower() for c in cities)]
+            if "remote" in line.lower() and "Remote" not in locs:
+                locs.append("Remote")
+            if locs:
+                result["preferred_locations"] = locs
+            break
+
+    # ── Summary — paragraph after a "Summary" heading ─────────────────────────
+    summary_lines: list[str] = []
+    in_summary = False
+    for line in lines:
+        if re.match(r"(professional\s+)?summary", line, re.IGNORECASE):
+            in_summary = True
+            continue
+        if in_summary:
+            if re.match(r"(experience|education|skills|certif|technical|core comp)", line, re.IGNORECASE):
+                break
+            if line and not line.startswith("---"):
+                summary_lines.append(line)
+            if len(summary_lines) >= 4:
+                break
+    if summary_lines:
+        result["summary"] = " ".join(summary_lines)
+
     return result
 
 
@@ -265,35 +363,50 @@ def _init_wizard_state() -> None:
     sd = st.session_state.setdefault  # shorthand
 
     # Step 1 — Profile & Schedule
-    sd("wz_name",         profile.get("name", ""))
-    sd("wz_email",        env.get("CANDIDATE_EMAIL", profile.get("email", "")))
-    sd("wz_phone",        env.get("CANDIDATE_PHONE", ""))
-    sd("wz_title",        profile.get("title", "Senior QE Manager"))
-    sd("wz_location",     profile.get("location", "Hyderabad, India"))
-    sd("wz_exp",          int(profile.get("experience_years", 10)))
-    sd("wz_locs",         ", ".join(prefs.get("preferred_locations", ["Hyderabad", "Remote"])))
-    sd("wz_summary",      skills.get("summary", ""))
-    sd("wz_remote_ok",    prefs.get("remote_ok", True))
+    # Use "or" guards throughout so empty-string / zero / empty-list values from
+    # a bad wizard save fall back to sensible defaults instead of showing blank.
+    sd("wz_name",         profile.get("name") or "")
+    sd("wz_email",        env.get("CANDIDATE_EMAIL") or profile.get("email") or "")
+    sd("wz_phone",        env.get("CANDIDATE_PHONE") or "")
+    sd("wz_title",        profile.get("title") or "QE Manager")
+    sd("wz_location",     profile.get("location") or "Hyderabad, India")
+    sd("wz_exp",          int(profile.get("experience_years") or 10))
+    _pref_locs = prefs.get("preferred_locations") or ["Hyderabad", "Remote"]
+    sd("wz_locs",         ", ".join(_pref_locs))
+    sd("wz_summary",      skills.get("summary") or "")
+    sd("wz_remote_ok",    prefs.get("remote_ok") if prefs.get("remote_ok") is not None else True)
     sd("wz_relocation_ok",prefs.get("relocation_ok", False))
-    sd("wz_notice",       int(prefs.get("notice_period_days", 30)))
-    sd("wz_timezone",     sys_cfg.get("timezone", "Asia/Kolkata"))
-    sd("wz_scout_start",  sched.get("scout_start", "05:00"))
-    sd("wz_deadline",     sched.get("apply_deadline", "09:15"))
+    sd("wz_notice",       int(prefs.get("notice_period_days") or 30))
+    sd("wz_timezone",     sys_cfg.get("timezone") or "Asia/Kolkata")
+    sd("wz_scout_start",  sched.get("scout_start") or "05:00")
+    sd("wz_deadline",     sched.get("apply_deadline") or "09:15")
 
     # Step 2 — Career Paths
-    sd("wz_pb_titles",    "\n".join(pb.get("target_titles", ["Senior QE Manager", "QA Manager", "Lead QE"])))
-    sd("wz_pb_threshold", int(pb.get("score_threshold", 72)))
-    sd("wz_pb_max",       int(pb.get("max_per_day", 15)))
-    sd("wz_pa_titles",    "\n".join(pa.get("target_titles", ["Director of QA", "Head of Quality"])))
-    sd("wz_pa_threshold", int(pa.get("score_threshold", 60)))
-    sd("wz_pa_max",       int(pa.get("max_per_day", 3)))
-    sd("wz_keywords",     "\n".join(scout.get("keywords", [])))
-    sd("wz_locations",    "\n".join(scout.get("locations", ["Hyderabad", "Remote"])))
-    sd("wz_exclude",      "\n".join(scout.get("exclude_keywords", ["fresher", "junior"])))
-    sd("wz_sig_sp",       "\n".join(signals.get("strong_positive", [])))
-    sd("wz_sig_mp",       "\n".join(signals.get("mild_positive", [])))
-    sd("wz_sig_sn",       "\n".join(signals.get("strong_negative", [])))
-    sd("wz_sig_mn",       "\n".join(signals.get("mild_negative", [])))
+    # Use "or" guards so a zero threshold / empty list from a bad save falls
+    # back to the sensible defaults rather than showing blank/zeroed widgets.
+    _pb_titles = pb.get("target_titles") or ["Senior QE Manager", "QA Manager", "Lead QE", "Quality Engineering Manager", "Lead Quality Engineer"]
+    _pa_titles = pa.get("target_titles") or ["Director of Quality Engineering", "Director of QA", "VP of Quality", "Head of Quality Engineering"]
+    _kws       = scout.get("keywords")   or ["Senior QE Manager", "Lead QE", "QA Manager", "Quality Engineering Manager", "Director Quality Assurance"]
+    _locs      = scout.get("locations")  or ["Hyderabad", "Remote", "India Remote"]
+    _excl      = scout.get("exclude_keywords") or ["fresher", "0-2 years", "junior", "associate"]
+    _sp        = signals.get("strong_positive") or ["automation architecture", "test framework", "CI/CD", "quality strategy", "team building", "shift-left"]
+    _mp        = signals.get("mild_positive")   or ["agile", "scrum", "API testing", "Selenium", "Playwright", "Python"]
+    _sn        = signals.get("strong_negative") or ["fresher", "0-2 years", "junior", "manual testing only"]
+    _mn        = signals.get("mild_negative")   or ["gaming", "hardware", "embedded systems"]
+
+    sd("wz_pb_titles",    "\n".join(_pb_titles))
+    sd("wz_pb_threshold", int(pb.get("score_threshold") or 72))
+    sd("wz_pb_max",       int(pb.get("max_per_day") or 15))
+    sd("wz_pa_titles",    "\n".join(_pa_titles))
+    sd("wz_pa_threshold", int(pa.get("score_threshold") or 60))
+    sd("wz_pa_max",       int(pa.get("max_per_day") or 3))
+    sd("wz_keywords",     "\n".join(_kws))
+    sd("wz_locations",    "\n".join(_locs))
+    sd("wz_exclude",      "\n".join(_excl))
+    sd("wz_sig_sp",       "\n".join(_sp))
+    sd("wz_sig_mp",       "\n".join(_mp))
+    sd("wz_sig_sn",       "\n".join(_sn))
+    sd("wz_sig_mn",       "\n".join(_mn))
 
     # Step 3 — Skills
     for cat_key, skill_key, _, _ in _SKILLS:
@@ -487,46 +600,77 @@ def _step_indicator(current: int, labels: list[str]) -> None:
     st.progress(current / max(len(labels) - 1, 1))
 
 
-# ── Step 1: Profile & Schedule ─────────────────────────────────────────────────
+# ── Resume upload widget (shared between wizard and settings mode) ─────────────
 
-def _step_profile() -> None:
-    # Resume upload — Ria's extract flow pre-fills all steps
+def _resume_upload_widget(first_time: bool = False) -> None:
+    """Upload expander — auto-saves all extracted data to config files on upload."""
     with st.expander(
-        "⬆️  Upload resume to auto-fill all steps",
-        expanded=not bool(st.session_state.get("wz_name")),
+        "⬆️  Upload resume to auto-fill all fields",
+        expanded=first_time and not bool(st.session_state.get("wz_name")),
     ):
         st.caption(
-            "PDF, DOCX, or Markdown. Ria extracts your profile, skills, and career keywords "
-            "and pre-fills every step at once — just review and continue."
+            "PDF, DOCX, or Markdown. "
+            "Ria extracts your profile, skills, and career keywords and saves them immediately."
         )
         uploaded = st.file_uploader(
             "resume", type=["pdf", "docx", "md", "txt"],
             label_visibility="collapsed", key="wz_upload",
         )
         if uploaded and st.session_state.get("_wz_last_upload") != uploaded.name:
-            parsed = _parse_resume(uploaded)
+            raw_bytes = uploaded.getvalue()
+
+            UPLOADED_DIR.mkdir(parents=True, exist_ok=True)
+            save_path = UPLOADED_DIR / uploaded.name
+            save_path.write_bytes(raw_bytes)
+
+            text = _extract_resume_text_bytes(uploaded.name, raw_bytes)
+            parsed = {}
+            if text:
+                with st.spinner("Parsing resume…"):
+                    parsed = _parse_with_ollama(text)
+                if not parsed:
+                    st.info("Ollama unavailable — using regex extraction.")
+                    parsed = _parse_with_regex(text)
+
             if parsed:
                 st.session_state["_wz_last_upload"] = uploaded.name
+                st.session_state["_wz_resume_path"] = str(save_path)
                 _apply_resume_to_state(parsed)
-                hits = [k for k in ("name","email","phone","title","location","experience_years") if parsed.get(k)]
+
+                # Auto-save to all config files immediately
+                _save_profile()
+                _save_skills()
+                if parsed.get("career"):
+                    _save_career()
+
+                hits    = [k for k in ("name","email","phone","title","location","experience_years") if parsed.get(k)]
                 n_skills = sum(len(v) for v in parsed.get("skills", {}).values())
                 st.success(
-                    f"Extracted {len(hits)} profile fields and {n_skills} skill ratings across all steps. "
-                    "Review each step before finishing."
+                    f"Auto-saved — {len(hits)} profile fields · {n_skills} skill ratings · "
+                    f"resume file stored at `{save_path.relative_to(ROOT)}`"
                 )
                 st.rerun()
             else:
                 st.error("Could not extract data. Ensure the file contains selectable text.")
 
+        if UPLOADED_DIR.exists():
+            uploads = sorted(UPLOADED_DIR.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+            if uploads:
+                st.caption(f"Previously uploaded: {', '.join(f.name for f in uploads[:3])}")
+
+
+# ── Profile & Schedule fields (shared widget set) ──────────────────────────────
+
+def _profile_fields() -> None:
     st.subheader("Personal Information")
     c1, c2 = st.columns(2)
     with c1:
-        st.text_input("Full Name",                   key="wz_name")
-        st.text_input("Email",                       key="wz_email")
-        st.text_input("Phone (e.g. +91XXXXXXXXXX)",  key="wz_phone")
+        st.text_input("Full Name",                  key="wz_name")
+        st.text_input("Email",                      key="wz_email")
+        st.text_input("Phone (e.g. +91XXXXXXXXXX)", key="wz_phone")
     with c2:
-        st.text_input("Current Title",               key="wz_title")
-        st.text_input("Location",                    key="wz_location")
+        st.text_input("Current Title",              key="wz_title")
+        st.text_input("Location",                   key="wz_location")
         st.number_input("Years of QA Experience", min_value=0, max_value=50, step=1, key="wz_exp")
 
     st.text_input("Preferred Job Locations (comma-separated)", key="wz_locs")
@@ -539,8 +683,8 @@ def _step_profile() -> None:
 
     st.subheader("Preferences")
     c1, c2, c3 = st.columns(3)
-    with c1: st.checkbox("Remote OK",       key="wz_remote_ok")
-    with c2: st.checkbox("Relocation OK",   key="wz_relocation_ok")
+    with c1: st.checkbox("Remote OK",     key="wz_remote_ok")
+    with c2: st.checkbox("Relocation OK", key="wz_relocation_ok")
     with c3: st.number_input("Notice Period (days)", min_value=0, max_value=180, step=1, key="wz_notice")
 
     st.subheader("Schedule")
@@ -548,6 +692,13 @@ def _step_profile() -> None:
     with c1: st.text_input("Timezone",               key="wz_timezone")
     with c2: st.text_input("Pipeline Start (HH:MM)", key="wz_scout_start")
     with c3: st.text_input("Apply Deadline (HH:MM)", key="wz_deadline")
+
+
+# ── Step 1: Profile & Schedule (wizard mode — includes upload widget) ───────────
+
+def _step_profile() -> None:
+    _resume_upload_widget(first_time=True)
+    _profile_fields()
 
 
 # ── Step 2: Career Paths ───────────────────────────────────────────────────────
@@ -645,7 +796,7 @@ def _step_resumes() -> None:
             st.markdown(new_a)
 
 
-# ── Settings wizard orchestrator ───────────────────────────────────────────────
+# ── Settings orchestrator — wizard on first run, settings page after ───────────
 
 _WIZARD_STEPS = [
     ("👤  Profile & Schedule", _step_profile),
@@ -655,14 +806,14 @@ _WIZARD_STEPS = [
 ]
 
 
-def page_settings_wizard() -> None:
-    _init_wizard_state()
+def _run_first_time_wizard() -> None:
+    """Multi-step guided wizard shown only when no profile is configured."""
     st.session_state.setdefault("wz_step", 0)
-
     step   = st.session_state["wz_step"]
     labels = [s[0] for s in _WIZARD_STEPS]
 
-    st.title("Settings")
+    st.title("First-Time Setup")
+    st.caption("Configure Nexus for your job search. You can update anything later in Settings.")
     _step_indicator(step, labels)
     st.divider()
 
@@ -684,10 +835,152 @@ def page_settings_wizard() -> None:
         else:
             if st.button("✅  Finish Setup", type="primary", use_container_width=True):
                 _save_wizard_step(step)
-                st.success(
-                    "All settings saved! "
-                    "Run `python orchestrator.py run --dry-run` to test the pipeline."
-                )
+                st.success("Setup complete! Run `python orchestrator.py run --dry-run` to test.")
+                st.rerun()  # rerun → profile now set → switches to settings page
+
+
+def _run_settings_page() -> None:
+    """Single-page editor for users who have already completed setup."""
+    profile = _read_yaml(SKILLS_FILE).get("profile", {})
+    name    = profile.get("name", "")
+
+    st.title("Settings")
+    st.caption(f"Editing profile for **{name}**. Each section saves independently.")
+
+    # Resume upload at the top — updates all sections at once
+    _resume_upload_widget(first_time=False)
+    st.divider()
+
+    # ── Profile & Schedule ──────────────────────────────────────────────────
+    with st.expander("👤  Profile & Schedule", expanded=True):
+        _profile_fields()
+        if st.button("Save Profile & Schedule", type="primary", key="sp_profile"):
+            _save_profile()
+            st.success("Profile saved.")
+
+    # ── Career Paths ────────────────────────────────────────────────────────
+    with st.expander("🎯  Career Paths", expanded=False):
+        _step_career()
+        if st.button("Save Career Paths", type="primary", key="sp_career"):
+            _save_career()
+            st.success("Career paths saved.")
+
+    # ── Skills ──────────────────────────────────────────────────────────────
+    with st.expander("⭐  Skills", expanded=False):
+        _step_skills()
+        if st.button("Save Skills", type="primary", key="sp_skills"):
+            _save_skills()
+            st.success("Skills saved.")
+
+    # ── Resumes ─────────────────────────────────────────────────────────────
+    with st.expander("📄  Resumes", expanded=False):
+        _step_resumes()
+
+    # ── Reset to wizard ─────────────────────────────────────────────────────
+    st.divider()
+    with st.expander("⚠️  Reset / Re-run Setup Wizard", expanded=False):
+        st.caption(
+            "This clears the wizard state so you can step through the guided setup again. "
+            "Your existing config files are NOT deleted."
+        )
+        if st.button("Reset wizard state", type="secondary"):
+            for key in list(st.session_state.keys()):
+                if key.startswith("wz_") or key in ("_wz_init", "_wz_last_upload", "_wz_resume_path"):
+                    del st.session_state[key]
+            st.rerun()
+
+
+def page_settings_wizard() -> None:
+    _init_wizard_state()
+    if st.session_state.get("wz_name"):
+        _run_settings_page()
+    else:
+        _run_first_time_wizard()
+
+
+# ── Pipeline control ───────────────────────────────────────────────────────────
+
+_PYTHON = str(ROOT / ".venv" / "Scripts" / "python.exe")
+_ORC    = str(ROOT / "orchestrator.py")
+
+
+def _run_orchestrator(*args: str, timeout: int = 60) -> tuple[str, str, int]:
+    """Run orchestrator.py with given args. Returns (stdout, stderr, returncode)."""
+    try:
+        result = subprocess.run(
+            [_PYTHON, _ORC, *args],
+            capture_output=True, text=True,
+            cwd=str(ROOT), timeout=timeout,
+        )
+        return result.stdout, result.stderr, result.returncode
+    except subprocess.TimeoutExpired:
+        return "", "Command timed out.", 1
+    except FileNotFoundError as e:
+        return "", str(e), 1
+
+
+def _pipeline_control_panel() -> None:
+    """Buttons that run orchestrator commands and stream output inline."""
+    cfg      = _read_yaml(AGENT_CONFIG)
+    live     = cfg.get("apply", {}).get("live_mode", False)
+    deadline = cfg.get("schedule", {}).get("apply_deadline", "09:15")
+
+    # ── Status ──────────────────────────────────────────────────────────────
+    if st.button("🔍  Check Status", use_container_width=True):
+        with st.spinner("Checking…"):
+            out, err, rc = _run_orchestrator("status")
+        if out:
+            st.code(out, language="text")
+        if err:
+            st.error(err)
+
+    st.divider()
+
+    # ── Dry-run ─────────────────────────────────────────────────────────────
+    st.caption("Safe run — scouts jobs and scores them, no applications submitted.")
+    if st.button("▶  Run Dry-Run", type="primary", use_container_width=True):
+        with st.spinner("Running pipeline (dry-run)… this may take a minute."):
+            out, err, rc = _run_orchestrator("run", "--dry-run", "--ignore-deadline", timeout=120)
+        if out:
+            st.code(out, language="text")
+        if err and rc != 0:
+            st.error(err)
+        elif rc == 0:
+            st.success("Dry-run complete. Check logs for job matches.")
+
+    st.divider()
+
+    # ── Live run ─────────────────────────────────────────────────────────────
+    if live:
+        st.warning(f"Live mode is ON — applications will be submitted before {deadline} IST.", icon="⚠️")
+        if st.button("🚀  Run Live", type="primary", use_container_width=True):
+            with st.spinner("Running live pipeline… do not close this tab."):
+                out, err, rc = _run_orchestrator("run", timeout=180)
+            if out:
+                st.code(out, language="text")
+            if err and rc != 0:
+                st.error(err)
+            elif rc == 0:
+                st.success("Pipeline complete.")
+    else:
+        st.caption("Live mode is off. Enable it in ⚙️ Settings → Advanced to submit real applications.")
+        st.button("🚀  Run Live", disabled=True, use_container_width=True,
+                  help="Enable live mode in Advanced settings first.")
+
+    st.divider()
+
+    # ── Daemon ──────────────────────────────────────────────────────────────
+    st.caption("Daemon runs every 30 min from 05:00 to 09:15 IST automatically.")
+    if st.button("⏰  Start Scheduler (background)", use_container_width=True):
+        try:
+            subprocess.Popen(
+                [_PYTHON, _ORC, "schedule"],
+                cwd=str(ROOT),
+                creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0,
+            )
+            st.success("Scheduler started in a new terminal window. It will run until you close that window.")
+        except Exception as e:
+            st.error(f"Could not start scheduler: {e}")
 
 
 # ── Other pages ────────────────────────────────────────────────────────────────
@@ -727,34 +1020,22 @@ def page_dashboard() -> None:
             icon = "✅" if path.exists() else "❌"
             st.write(f"{icon} `{path.relative_to(ROOT)}`")
     with cr:
-        st.subheader("Quick Reference")
-        st.code(
-            "# Safe test — no real submissions\n"
-            "python orchestrator.py run --dry-run\n\n"
-            "# Check status\n"
-            "python orchestrator.py status\n\n"
-            "# Daemon (5–9 AM IST, every 30 min)\n"
-            "python orchestrator.py schedule",
-            language="bash",
-        )
+        st.subheader("Pipeline Control")
+        _pipeline_control_panel()
 
     if CAREER_PATHS_FILE.exists():
         st.divider()
-        st.subheader("Active Career Paths")
         cp = _read_yaml(CAREER_PATHS_FILE)
+        pa = cp.get("paths", {}).get("path_a", {})
+        pb = cp.get("paths", {}).get("path_b", {})
         ca, cb = st.columns(2)
         with ca:
-            pa = cp.get("paths", {}).get("path_a", {})
-            st.markdown(f"**Path A — {pa.get('name','Stretch')}**")
-            st.caption(f"Score ≥ {pa.get('score_threshold',60)} · Max {pa.get('max_per_day',3)}/day · Human review")
-            for t in pa.get("target_titles", []):
-                st.write(f"  • {t}")
+            st.metric("Path A threshold", f"{pa.get('score_threshold', 60)}/100",
+                      delta=f"{len(pa.get('target_titles', []))} titles · max {pa.get('max_per_day', 3)}/day")
         with cb:
-            pb = cp.get("paths", {}).get("path_b", {})
-            st.markdown(f"**Path B — {pb.get('name','Primary')}**")
-            st.caption(f"Score ≥ {pb.get('score_threshold',72)} · Max {pb.get('max_per_day',15)}/day · Auto-applied")
-            for t in pb.get("target_titles", []):
-                st.write(f"  • {t}")
+            st.metric("Path B threshold", f"{pb.get('score_threshold', 72)}/100",
+                      delta=f"{len(pb.get('target_titles', []))} titles · max {pb.get('max_per_day', 15)}/day")
+        st.caption("Edit targets and thresholds in ⚙️ Settings → Career Paths.")
 
 
 def page_notifications() -> None:
@@ -780,6 +1061,17 @@ def page_notifications() -> None:
         with c2: naukri_pass  = st.text_input("Naukri Password", value="", type="password",
                                                placeholder="Leave blank to keep existing")
 
+        st.subheader("LinkedIn")
+        st.warning(
+            "⚠️ LinkedIn auto-apply is **disabled** — Playwright automation triggers bot detection "
+            "and risks a permanent account ban. Store credentials here for **manual reference only**.",
+            icon="⚠️",
+        )
+        c1, c2 = st.columns(2)
+        with c1: li_email = st.text_input("LinkedIn Email",    value=env.get("LINKEDIN_EMAIL",""))
+        with c2: li_pass  = st.text_input("LinkedIn Password", value="", type="password",
+                                           placeholder="Stored locally only — never submitted automatically")
+
         submitted = st.form_submit_button("Save Credentials", type="primary")
 
     if submitted:
@@ -792,6 +1084,9 @@ def page_notifications() -> None:
         env["NAUKRI_EMAIL"] = naukri_email
         if naukri_pass:
             env["NAUKRI_PASSWORD"] = naukri_pass
+        env["LINKEDIN_EMAIL"] = li_email
+        if li_pass:
+            env["LINKEDIN_PASSWORD"] = li_pass
         env.setdefault("DATABASE_URL", "sqlite:///db/nexus.db")
         env.setdefault("LOG_LEVEL",    "INFO")
         env.setdefault("LOG_FILE",     "logs/nexus.log")
@@ -799,6 +1094,113 @@ def page_notifications() -> None:
         st.success("Credentials saved to .env")
         if naukri_email:
             st.info("Run `python orchestrator.py store-creds naukri` to also store in the OS keyring.")
+
+
+def page_jobs() -> None:
+    import sqlite3
+    st.title("Available Jobs")
+    st.caption("Jobs discovered by the Scout across all platforms. Run a scan first if the table is empty.")
+
+    if not DB_PATH.exists():
+        st.info(
+            "No database found yet. Run a scan to populate jobs:\n\n"
+            "```bash\npython orchestrator.py run --dry-run\n```"
+        )
+        return
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT job_id, title, company, location, platform, url, first_seen_at "
+            "FROM seen_jobs ORDER BY first_seen_at DESC"
+        ).fetchall()
+
+    if not rows:
+        st.info("Database exists but no jobs yet. Run a scan to populate.")
+        return
+
+    import pandas as pd
+    df = pd.DataFrame([dict(r) for r in rows])
+    df["first_seen_at"] = pd.to_datetime(df["first_seen_at"]).dt.strftime("%Y-%m-%d %H:%M")
+    df["url"]      = df["url"].fillna("").str.strip()
+    df["location"] = df["location"].fillna("").str.strip()
+
+    # Platform breakdown metrics
+    platform_counts = df["platform"].value_counts()
+    platforms = platform_counts.index.tolist()
+
+    st.subheader(f"{len(df):,} jobs discovered")
+    cols = st.columns(min(len(platforms), 5))
+    for i, (plat, count) in enumerate(platform_counts.items()):
+        with cols[i % len(cols)]:
+            st.metric(plat.title(), count)
+
+    st.divider()
+
+    # Filters
+    fc1, fc2 = st.columns([2, 3])
+    with fc1:
+        plat_filter = st.multiselect(
+            "Platform", options=["All"] + platforms, default=["All"]
+        )
+    with fc2:
+        search = st.text_input("Search title or company", placeholder="e.g. QE Manager")
+
+    filtered = df.copy()
+    if plat_filter and "All" not in plat_filter:
+        filtered = filtered[filtered["platform"].isin(plat_filter)]
+    if search:
+        mask = (
+            filtered["title"].str.contains(search, case=False, na=False) |
+            filtered["company"].str.contains(search, case=False, na=False)
+        )
+        filtered = filtered[mask]
+
+    st.caption(f"Showing {len(filtered):,} of {len(df):,} jobs")
+
+    # Build display frame — url rendered as a clickable LinkColumn
+    display = filtered[["title", "company", "location", "platform", "url", "first_seen_at"]].rename(
+        columns={
+            "title":         "Job Title",
+            "company":       "Company",
+            "location":      "Location",
+            "platform":      "Platform",
+            "url":           "Apply Link",
+            "first_seen_at": "Discovered",
+        }
+    )
+
+    st.dataframe(
+        display,
+        use_container_width=True,
+        hide_index=True,
+        height=540,
+        column_config={
+            "Apply Link": st.column_config.LinkColumn(
+                "Apply Link",
+                display_text="Open ↗",
+                help="Click to open the job posting in a new tab",
+            ),
+            "Job Title": st.column_config.TextColumn("Job Title", width="large"),
+            "Company":   st.column_config.TextColumn("Company",   width="medium"),
+            "Location":  st.column_config.TextColumn("Location",  width="medium"),
+            "Platform":  st.column_config.TextColumn("Platform",  width="small"),
+        },
+    )
+
+    # Uploaded resumes sidebar
+    st.divider()
+    st.subheader("Saved Resumes")
+    if UPLOADED_DIR.exists():
+        uploads = sorted(UPLOADED_DIR.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+        if uploads:
+            for f in uploads:
+                size_kb = f.stat().st_size // 1024
+                st.write(f"📄 `{f.name}` — {size_kb} KB")
+        else:
+            st.caption("No uploaded resumes yet.")
+    else:
+        st.caption("No uploaded resumes yet.")
 
 
 def page_advanced() -> None:
@@ -863,10 +1265,11 @@ st.set_page_config(
 )
 
 PAGES = {
-    "🏠  Dashboard":                page_dashboard,
-    "⚙️  Settings":                 page_settings_wizard,
+    "🏠  Dashboard":                   page_dashboard,
+    "📋  Available Jobs":              page_jobs,
+    "⚙️  Settings":                    page_settings_wizard,
     "🔔  Notifications & Credentials": page_notifications,
-    "🔧  Advanced":                 page_advanced,
+    "🔧  Advanced":                    page_advanced,
 }
 
 with st.sidebar:

@@ -1,4 +1,6 @@
 # ─── Nexus Career Paths ─────────────────────────────────────────────────────
+# Path A = stretch roles (human review before applying).
+# Path B = primary track (auto-applied before deadline).
 
 paths:
   path_a:
@@ -11,7 +13,12 @@ paths:
     auto_apply: false
     queue_label: Needs Your Review
     target_titles:
-    - Director of QA
+      - Director of Quality Engineering
+      - Director of QA
+      - VP of Quality
+      - Head of Quality Engineering
+      - Head of QE
+
   path_b:
     name: Primary Track
     description: Strong-fit roles — Nexus applies automatically before the deadline
@@ -22,15 +29,43 @@ paths:
     auto_apply: true
     queue_label: Auto-Applied
     target_titles:
-    - Senior QE Manager
-    - QA Manager
+      - Senior QE Manager
+      - QE Manager
+      - QA Manager
+      - Quality Engineering Manager
+      - Lead QE
+      - Lead Quality Engineer
+      - Engineering Manager - QA
+
 scoring_signals:
   strong_positive:
-  - CI/CD
-  - test automation
+    - automation architecture
+    - test framework
+    - CI/CD
+    - quality strategy
+    - team building
+    - shift-left
+    - Playwright
+    - pytest
+
   mild_positive:
-  - agile
+    - agile
+    - scrum
+    - API testing
+    - Selenium
+    - Python
+    - cloud
+    - Jira
+
   strong_negative:
-  - fresher
+    - fresher
+    - 0-2 years
+    - junior
+    - manual testing only
+    - entry level
+
   mild_negative:
-  - gaming
+    - gaming
+    - hardware
+    - embedded systems
+    - blockchain

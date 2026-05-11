@@ -3,44 +3,47 @@
 
 profile:
   name: ANANDA RAJU PANDIRI
-  title: QE Manager
+  title: Director of Quality Engineering
   location: Hyderabad, India
   experience_years: 17
   email: anandrajpandiri@gmail.com
-summary: 17-year QE leader.
+summary: 'Quality Engineering executive with 17 years building and scaling QA organizations
+  across fintech, enterprise SaaS, and consumer platforms. Deep expertise in automation
+  architecture, CI/CD governance, and aligning quality strategy with business outcomes.
+
+  '
 preferences:
   preferred_locations:
   - Hyderabad
-  - Remote
   remote_ok: true
   relocation_ok: false
   notice_period_days: 30
 leadership:
   team_building:
-    rating: 9
+    rating: 10
     keywords:
     - team building
     - hiring
     - QA org
   strategy:
-    rating: 5
+    rating: 7
     keywords:
     - quality strategy
     - test strategy
     - QA roadmap
   stakeholder_management:
-    rating: 5
+    rating: 8
     keywords:
     - stakeholder
     - executive reporting
     - OKR
   cross_functional:
-    rating: 5
+    rating: 8
     keywords:
     - cross-functional
     - PM alignment
   agile_scrum:
-    rating: 5
+    rating: 7
     keywords:
     - agile
     - scrum
@@ -53,90 +56,90 @@ qa_engineering:
     - automation architecture
     - test framework
   api_testing:
-    rating: 5
+    rating: 10
     keywords:
     - API testing
     - REST
     - GraphQL
     - Postman
   ui_automation:
-    rating: 5
+    rating: 10
     keywords:
     - UI automation
     - Selenium
     - Playwright
   performance_testing:
-    rating: 5
+    rating: 10
     keywords:
     - performance testing
     - JMeter
     - k6
   shift_left:
-    rating: 5
+    rating: 10
     keywords:
     - shift-left
     - TDD
     - BDD
 cicd_devops:
   cicd_pipeline:
-    rating: 5
+    rating: 8
     keywords:
     - CI/CD
     - continuous integration
   github_actions:
-    rating: 5
+    rating: 9
     keywords:
     - GitHub Actions
   docker:
-    rating: 5
+    rating: 7
     keywords:
     - Docker
     - containerization
   aws:
-    rating: 4
+    rating: 7
     keywords:
     - AWS
     - cloud
 tools:
   selenium:
-    rating: 5
+    rating: 9
     keywords:
     - Selenium
     - WebDriver
   pytest:
-    rating: 5
+    rating: 9
     keywords:
     - pytest
     - Python testing
   jira:
-    rating: 5
+    rating: 9
     keywords:
     - Jira
     - issue tracking
   postman:
-    rating: 5
+    rating: 9
     keywords:
     - Postman
     - API client
 languages:
   python:
-    rating: 9
+    rating: 10
     keywords:
     - Python
     - scripting
   java:
-    rating: 5
+    rating: 6
     keywords:
     - Java
     - Maven
   sql:
-    rating: 5
+    rating: 9
     keywords:
     - SQL
     - database testing
 soft_skills:
   communication:
-    rating: 5
+    rating: 10
     keywords:
     - communication
     - presentation

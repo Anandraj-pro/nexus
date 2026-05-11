@@ -25,11 +25,20 @@ scout:
   - indeed
   keywords:
   - Senior QE Manager
+  - Lead QE
+  - QA Manager
+  - Quality Engineering Manager
+  - Director Quality Assurance
+  - Head of Quality Engineering
   locations:
   - Hyderabad
   - Remote
+  - India Remote
   exclude_keywords:
   - fresher
+  - 0-2 years
+  - junior
+  - associate
   max_jobs_per_run: 100
   deduplicate: true
 scorer:
@@ -52,7 +61,7 @@ tailor:
   output_dir: resources/resumes/tailored/
 apply:
   enabled: true
-  live_mode: false
+  live_mode: true
   browser: chromium
   headless: true
   slow_mo_ms: 50
