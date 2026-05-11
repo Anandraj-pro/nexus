@@ -222,6 +222,10 @@ Extend `NexusReporter` in `agents/reporter.py` and add the channel name to `repo
 
 ---
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup, code style, and how to add new platform adapters.
+
 ## License
 
 MIT
