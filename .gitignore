@@ -48,6 +48,13 @@ resources/credentials/
 
 # Resume outputs (contain PII)
 resources/resumes/tailored/
+resources/resumes/*.pdf
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
 
 # ChromaDB
 chroma_db/
