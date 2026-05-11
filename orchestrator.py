@@ -1,14 +1,14 @@
 """
-Jireh Orchestrator — the central coordinator for all agents.
-
-Jehovah Jireh: The Lord Will Provide. (Genesis 22:14)
-Proverbs 16:9: A man's heart plans his way, but the Lord directs his steps.
+Nexus Orchestrator — the central coordinator for all agents.
 
 Run the full pipeline:
     python orchestrator.py run
 
-Run on schedule (daemon — wakes at 5 AM IST, re-checks every 30 min):
+Run on schedule (daemon — wakes at configured start time, re-checks every 30 min):
     python orchestrator.py schedule
+
+First-time setup:
+    python orchestrator.py init
 
 Check status:
     python orchestrator.py status
@@ -39,7 +39,7 @@ console = Console()
 
 # ─── Logging setup ────────────────────────────────────────────────────────────
 
-def _setup_logging(log_level: str = "INFO", log_file: str = "logs/jireh.log") -> None:
+def _setup_logging(log_level: str = "INFO", log_file: str = "logs/nexus.log") -> None:
     Path(log_file).parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=getattr(logging, log_level.upper(), logging.INFO),
@@ -51,7 +51,7 @@ def _setup_logging(log_level: str = "INFO", log_file: str = "logs/jireh.log") ->
     )
 
 
-logger = logging.getLogger("jireh.orchestrator")
+logger = logging.getLogger("nexus.orchestrator")
 
 
 # ─── Config loader ────────────────────────────────────────────────────────────
@@ -87,12 +87,12 @@ def _past_deadline(deadline_ist: str = "09:15") -> bool:
 # ─── Core pipeline ────────────────────────────────────────────────────────────
 
 async def run_pipeline(config: dict, skills: dict, dry_run: bool = False, ignore_deadline: bool = False) -> None:
-    from agents.scout import JirehScout
-    from agents.scorer import JirehScorer
-    from agents.tailor import JirehTailor
-    from agents.apply import JirehApply
-    from agents.reporter import JirehReporter
-    from agents.vault import JirehVault
+    from agents.scout import NexusScout
+    from agents.scorer import NexusScorer
+    from agents.tailor import NexusTailor
+    from agents.apply import NexusApply
+    from agents.reporter import NexusReporter
+    from agents.vault import NexusVault
 
     # Override live_mode if dry_run flag is set
     if dry_run:
@@ -102,22 +102,21 @@ async def run_pipeline(config: dict, skills: dict, dry_run: bool = False, ignore
 
     console.print(
         Panel(
-            "[bold gold1]Jireh is awake.[/]\n"
-            "[dim]Jehovah Jireh — The Lord Will Provide[/]\n"
+            "[bold cyan]Nexus is awake.[/]\n"
             f"[dim]Pipeline start: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}[/]",
-            border_style="gold1",
+            border_style="cyan",
         )
     )
 
-    vault = JirehVault(config)
-    scout = JirehScout(config, vault=vault)
-    scorer = JirehScorer(config, skills)
-    tailor = JirehTailor(config)
-    applier = JirehApply(config)
-    reporter = JirehReporter(config)
+    vault = NexusVault(config)
+    scout = NexusScout(config, vault=vault)
+    scorer = NexusScorer(config, skills)
+    tailor = NexusTailor(config)
+    applier = NexusApply(config)
+    reporter = NexusReporter(config)
 
     # ── 1. Scout ──────────────────────────────────────────────────────────────
-    logger.info("Phase 1/5 — jireh-scout starting")
+    logger.info("Phase 1/5 — nexus-scout starting")
     postings = await scout.run()
     logger.info("Scout complete: %d new postings", len(postings))
 
@@ -128,7 +127,7 @@ async def run_pipeline(config: dict, skills: dict, dry_run: bool = False, ignore
         return
 
     # ── 2. Score ──────────────────────────────────────────────────────────────
-    logger.info("Phase 2/5 — jireh-scorer starting")
+    logger.info("Phase 2/5 — nexus-scorer starting")
     scored_jobs = await scorer.score_batch(postings)
     logger.info(
         "Scorer complete: %d/%d qualified (path_a: %d, path_b: %d)",
@@ -139,7 +138,7 @@ async def run_pipeline(config: dict, skills: dict, dry_run: bool = False, ignore
     )
 
     # ── 3. Tailor ─────────────────────────────────────────────────────────────
-    logger.info("Phase 3/5 — jireh-tailor starting")
+    logger.info("Phase 3/5 — nexus-tailor starting")
     applications = await tailor.tailor_batch(scored_jobs)
     logger.info("Tailor complete: %d applications prepared", len(applications))
 
@@ -148,18 +147,18 @@ async def run_pipeline(config: dict, skills: dict, dry_run: bool = False, ignore
         logger.warning("Past apply deadline (%s IST) — skipping submission phase", deadline)
         results = []
     else:
-        logger.info("Phase 4/5 — jireh-apply starting")
+        logger.info("Phase 4/5 — nexus-apply starting")
         results = await applier.apply_batch(applications)
         submitted = sum(1 for r in results if r.status.value == "submitted")
         logger.info("Apply complete: %d submitted", submitted)
 
     # ── 5. Report ─────────────────────────────────────────────────────────────
-    logger.info("Phase 5/5 — jireh-reporter starting")
+    logger.info("Phase 5/5 — nexus-reporter starting")
     digest = reporter.build_digest(results, len(postings), len(scored_jobs))
     telegram_text = reporter.render_telegram(digest)
     console.print(Panel(telegram_text, title="Daily Digest Preview", border_style="blue"))
     await reporter.send(digest)
-    logger.info("Pipeline complete. He goes before you.")
+    logger.info("Pipeline complete.")
 
 
 # ─── Scheduler helpers ────────────────────────────────────────────────────────
@@ -208,7 +207,7 @@ def _next_run_label(run_times: list[tuple[int, int]], timezone: str) -> str:
 
 @click.group()
 def cli() -> None:
-    """Jireh — Autonomous Job Hunt Agent. Jehovah Jireh: The Lord Will Provide."""
+    """Nexus — Autonomous Job Hunt Agent. Connects your skills to the right openings."""
 
 
 @cli.command()
@@ -217,12 +216,12 @@ def cli() -> None:
 @click.option("--config", "config_path", default="resources/config/agent_config.yaml")
 @click.option("--skills", "skills_path", default="resources/skills/skills_profile.yaml")
 def run(dry_run: bool, ignore_deadline: bool, config_path: str, skills_path: str) -> None:
-    """Execute the full Jireh pipeline: Scout → Score → Tailor → Apply → Report."""
+    """Execute the full Nexus pipeline: Scout → Score → Tailor → Apply → Report."""
     config = load_config(config_path)
     skills = load_skills(skills_path)
     _setup_logging(
         config.get("system", {}).get("log_level", "INFO"),
-        config.get("system", {}).get("log_file", "logs/jireh.log"),
+        config.get("system", {}).get("log_file", "logs/nexus.log"),
     )
     if dry_run:
         console.print("[yellow]DRY-RUN mode — no applications will be submitted[/]")
@@ -233,9 +232,9 @@ def run(dry_run: bool, ignore_deadline: bool, config_path: str, skills_path: str
 
 @cli.command()
 def status() -> None:
-    """Show current Jireh configuration and status."""
+    """Show current Nexus configuration and status."""
     config = load_config()
-    console.print(Panel("[bold]Jireh System Status[/]", border_style="green"))
+    console.print(Panel("[bold]Nexus System Status[/]", border_style="cyan"))
     console.print(f"  Live mode: {config.get('apply', {}).get('live_mode', False)}")
     console.print(f"  Apply deadline: {config.get('schedule', {}).get('apply_deadline', '09:15')} IST")
     console.print(f"  Path B threshold: {config.get('scorer', {}).get('path_b_threshold', 72)}/100")
@@ -247,7 +246,7 @@ def status() -> None:
 @click.option("--config", "config_path", default="resources/config/agent_config.yaml")
 @click.option("--skills", "skills_path", default="resources/skills/skills_profile.yaml")
 def schedule(dry_run: bool, config_path: str, skills_path: str) -> None:
-    """Start the Jireh scheduling daemon — runs pipeline daily on the configured schedule."""
+    """Start the Nexus scheduling daemon — runs pipeline daily on the configured schedule."""
     from apscheduler.schedulers.blocking import BlockingScheduler
     from apscheduler.triggers.cron import CronTrigger
 
@@ -255,7 +254,7 @@ def schedule(dry_run: bool, config_path: str, skills_path: str) -> None:
     skills = load_skills(skills_path)
     _setup_logging(
         config.get("system", {}).get("log_level", "INFO"),
-        config.get("system", {}).get("log_file", "logs/jireh.log"),
+        config.get("system", {}).get("log_file", "logs/nexus.log"),
     )
 
     sched_cfg = config.get("schedule", {})
@@ -278,8 +277,8 @@ def schedule(dry_run: bool, config_path: str, skills_path: str) -> None:
         scheduler.add_job(
             _run_job,
             CronTrigger(hour=h, minute=m, timezone=timezone),
-            id=f"jireh_{h:02d}{m:02d}",
-            name=f"Jireh {h:02d}:{m:02d} IST",
+            id=f"nexus_{h:02d}{m:02d}",
+            name=f"Nexus {h:02d}:{m:02d}",
             misfire_grace_time=300,
             coalesce=True,
         )
@@ -289,13 +288,13 @@ def schedule(dry_run: bool, config_path: str, skills_path: str) -> None:
 
     console.print(
         Panel(
-            "[bold gold1]Jireh Scheduler Active[/]\n"
+            "[bold cyan]Nexus Scheduler Active[/]\n"
             f"[dim]Timezone : {timezone}[/]\n"
-            f"[dim]Runs at  : {time_labels} IST[/]\n"
-            f"[dim]Deadline : {deadline} IST — no submissions after this[/]\n"
+            f"[dim]Runs at  : {time_labels}[/]\n"
+            f"[dim]Deadline : {deadline} — no submissions after this[/]\n"
             f"[dim]Mode     : {'DRY-RUN ⚠' if dry_run else 'LIVE ✓'}[/]\n"
             f"[dim]Next run : {next_run_str}[/]",
-            border_style="gold1",
+            border_style="cyan",
         )
     )
 
@@ -307,16 +306,16 @@ def schedule(dry_run: bool, config_path: str, skills_path: str) -> None:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         logger.info("Scheduler stopped by user")
-        console.print("\n[yellow]Jireh scheduler stopped. He still provides.[/]")
+        console.print("\n[yellow]Nexus scheduler stopped.[/]")
 
 
 @cli.command()
 @click.option("--config", "config_path", default="resources/config/agent_config.yaml")
 @click.option("--skills", "skills_path", default="resources/skills/skills_profile.yaml")
 def voice(config_path: str, skills_path: str) -> None:
-    """Activate Jireh voice interface — press Enter to speak commands."""
+    """Activate Nexus voice interface — press Enter to speak commands."""
     try:
-        from agents.voice import JirehVoice
+        from agents.voice import NexusVoice
     except ImportError:
         console.print(
             "[red]Voice extras not installed.[/] Run:\n"
@@ -329,13 +328,13 @@ def voice(config_path: str, skills_path: str) -> None:
     skills = load_skills(skills_path)
     _setup_logging(
         config.get("system", {}).get("log_level", "INFO"),
-        config.get("system", {}).get("log_file", "logs/jireh.log"),
+        config.get("system", {}).get("log_file", "logs/nexus.log"),
     )
 
     async def _pipeline(dry_run: bool = True) -> None:
         await run_pipeline(config, skills, dry_run=dry_run)
 
-    voice_agent = JirehVoice(config, _pipeline)
+    voice_agent = NexusVoice(config, _pipeline)
     asyncio.run(voice_agent.run_loop())
 
 
@@ -345,12 +344,19 @@ def voice(config_path: str, skills_path: str) -> None:
 @click.option("--password", prompt=True, hide_input=True)
 def store_creds(platform: str, email: str, password: str) -> None:
     """Store platform credentials in the OS keyring."""
-    from agents.vault import JirehVault
+    from agents.vault import NexusVault
 
     config = load_config()
-    vault = JirehVault(config)
+    vault = NexusVault(config)
     vault.store_credentials(platform, email, password)
     console.print(f"[green]Credentials stored for {platform}[/]")
+
+
+@cli.command()
+def init() -> None:
+    """First-time setup — generates config files interactively for a new user."""
+    from agents.init_wizard import run_init_wizard
+    run_init_wizard(console)
 
 
 if __name__ == "__main__":

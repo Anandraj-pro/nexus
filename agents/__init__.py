@@ -1,17 +1,17 @@
-"""Jireh agent package — each module is one autonomous agent."""
+"""Nexus agent package — each module is one autonomous agent."""
 
-from agents.scout import JirehScout
-from agents.scorer import JirehScorer
-from agents.tailor import JirehTailor
-from agents.apply import JirehApply
-from agents.reporter import JirehReporter
-from agents.vault import JirehVault
+from agents.scout import NexusScout
+from agents.scorer import NexusScorer
+from agents.tailor import NexusTailor
+from agents.apply import NexusApply
+from agents.reporter import NexusReporter
+from agents.vault import NexusVault
 
 __all__ = [
-    "JirehScout",
-    "JirehScorer",
-    "JirehTailor",
-    "JirehApply",
-    "JirehReporter",
-    "JirehVault",
+    "NexusScout",
+    "NexusScorer",
+    "NexusTailor",
+    "NexusApply",
+    "NexusReporter",
+    "NexusVault",
 ]

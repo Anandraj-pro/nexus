@@ -1,4 +1,4 @@
-"""jireh-reporter — compiles and sends the daily digest via Telegram and/or email."""
+"""nexus-reporter — compiles and sends the daily digest via Telegram and/or email."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ class DigestReport:
     scripture: str
 
 
-class JirehReporter:
+class NexusReporter:
     """
     Builds the daily digest and sends it to configured channels.
 
@@ -85,7 +85,7 @@ class JirehReporter:
         path_b_label = "Would auto-apply (Path B — dry run)" if is_dry_run else "Auto-applied (Path B)"
 
         lines = [
-            f"✦ *Jireh Daily Report — {digest.date}*",
+            f"✦ *Nexus Daily Report — {digest.date}*",
             f"_{digest.scripture}_",
             "",
             f"📊 *Overview*",
@@ -145,7 +145,7 @@ class JirehReporter:
         if not jobs:
             return ""
         lines = [
-            f"Jireh — Jobs Requiring Your Attention ({digest.date})",
+            f"Nexus — Jobs Requiring Your Attention ({digest.date})",
             "=" * 60,
             "",
             f"{digest.scripture}",
@@ -175,8 +175,6 @@ class JirehReporter:
             await self._send_email(digest)
             if digest.external_apply or digest.path_a_queued:
                 await self._send_manual_apply_email(digest)
-        if "whatsapp" in self._channels:
-            await self._send_whatsapp(digest)
 
     async def _send_telegram(self, digest: DigestReport) -> None:
         import os
@@ -203,35 +201,6 @@ class JirehReporter:
         except Exception:
             logger.exception("Telegram send failed")
 
-    async def _send_whatsapp(self, digest: DigestReport) -> None:
-        import os
-        from urllib.parse import quote
-
-        import httpx
-
-        phone = os.getenv("WHATSAPP_PHONE", "")
-        api_key = os.getenv("WHATSAPP_API_KEY", "")
-
-        if not phone or not api_key:
-            logger.warning("WhatsApp not configured — set WHATSAPP_PHONE and WHATSAPP_API_KEY in .env")
-            return
-
-        try:
-            # Strip markdown symbols — WhatsApp plain text only via CallMeBot
-            text = self.render_telegram(digest).replace("*", "").replace("_", "").replace("[", "").replace("]", "")
-            url = (
-                f"https://api.callmebot.com/whatsapp.php"
-                f"?phone={phone}&text={quote(text)}&apikey={api_key}"
-            )
-            async with httpx.AsyncClient(timeout=20) as client:
-                resp = await client.get(url)
-                if resp.status_code == 200:
-                    logger.info("Reporter → WhatsApp digest sent to %s", phone)
-                else:
-                    logger.warning("WhatsApp send returned %d: %s", resp.status_code, resp.text[:200])
-        except Exception:
-            logger.exception("WhatsApp send failed")
-
     async def _send_email(self, digest: DigestReport) -> None:
         import asyncio
         import os
@@ -250,7 +219,7 @@ class JirehReporter:
 
             body = self.render_telegram(digest).replace("*", "").replace("_", "")
             msg = mt.MIMEText(body, "plain")
-            msg["Subject"] = f"Jireh Daily Report — {digest.date}"
+            msg["Subject"] = f"Nexus Daily Report — {digest.date}"
             msg["From"] = sender
             msg["To"] = recipient
             raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
@@ -277,7 +246,7 @@ class JirehReporter:
             body = self.render_manual_apply_email(digest)
             count = len(digest.external_apply) + len(digest.path_a_queued)
             msg = mt.MIMEText(body, "plain")
-            msg["Subject"] = f"Jireh — {count} Jobs Need Your Application ({digest.date})"
+            msg["Subject"] = f"Nexus — {count} Jobs Need Your Application ({digest.date})"
             msg["From"] = sender
             msg["To"] = recipient
             raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()

@@ -1,4 +1,4 @@
-"""jireh-apply — submits job applications via Playwright before the 9:15 AM deadline."""
+"""nexus-apply — submits job applications via Playwright before the configured deadline."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ class _ExternalApplicationError(Exception):
 class ApplyStatus(str, Enum):
     SUBMITTED = "submitted"
     QUEUED_FOR_HUMAN = "queued_for_human"
-    EXTERNAL_APPLY = "external_apply"   # no Easy Apply — Anand must apply manually
+    EXTERNAL_APPLY = "external_apply"   # no Easy Apply — user must apply manually
     SKIPPED_CAPTCHA = "skipped_captcha"
     SKIPPED_DEADLINE = "skipped_deadline"
     FAILED = "failed"
@@ -39,7 +39,7 @@ class ApplicationResult:
     confirmation_id: str = ""
 
 
-class JirehApply:
+class NexusApply:
     """
     Submits applications for Path B jobs automatically.
     Path A jobs are queued for human approval without submitting.
@@ -61,9 +61,11 @@ class JirehApply:
             config.get("vault", {}).get("session_dir", "resources/credentials/sessions/")
         )
 
+        self._experience_years: int = apply_cfg.get("candidate_experience_years", 10)
+
         if not self._live_mode:
             logger.warning(
-                "jireh-apply running in DRY-RUN mode. "
+                "nexus-apply running in DRY-RUN mode. "
                 "Set apply.live_mode=true in agent_config.yaml to submit real applications."
             )
 
@@ -279,7 +281,7 @@ class JirehApply:
         for inp in numeric_inputs:
             val = await inp.input_value()
             if not val.strip():
-                await inp.fill("17")
+                await inp.fill(str(self._experience_years))
 
         # Dropdowns — pick first non-placeholder option if unset
         selects = await page.query_selector_all(

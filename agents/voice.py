@@ -1,4 +1,4 @@
-"""jireh-voice — voice-activated interface for Jireh.
+"""nexus-voice — voice-activated interface for Nexus.
 
 Press Enter to speak a command. Jireh listens, transcribes with Whisper,
 parses intent with Ollama, executes the action, and responds by voice.
@@ -61,7 +61,7 @@ def _ollama_chat(model: str, messages: list[dict]) -> str:
     return response["message"]["content"]
 
 
-class JirehVoice:
+class NexusVoice:
     """
     Hotkey-activated voice interface.
 
@@ -89,7 +89,7 @@ class JirehVoice:
         logger.info("Loading Whisper model '%s' — first run downloads ~%s",
                     model_name, {"tiny": "75MB", "base": "145MB", "small": "460MB"}.get(model_name, "?"))
         self._whisper = whisper.load_model(model_name)
-        logger.info("JirehVoice ready")
+        logger.info("NexusVoice ready")
 
     # ── TTS ───────────────────────────────────────────────────────────────────
 

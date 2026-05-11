@@ -1,41 +1,33 @@
-# ─── Jireh Career Paths ───────────────────────────────────────────────────────
+# ─── Nexus Career Paths ───────────────────────────────────────────────────────
 # Two parallel tracks with different automation levels.
-# Proverbs 16:9 — "A man's heart plans his way, but the Lord directs his steps."
+# Run 'python orchestrator.py init' to regenerate from your target roles.
 
 paths:
   path_a:
-    name: "Director / VP Track"
-    description: "Stretch roles requiring personal judgment and tailored outreach"
+    name: "Stretch / Senior Track"
+    description: "Roles requiring personal judgment — Nexus queues these for your review"
     human_approval_required: true
     max_per_day: 3
     score_threshold: 60
     resume_variant: path_a
     auto_apply: false
-    queue_label: "🔵 Needs Your Review"
+    queue_label: "Needs Your Review"
     target_titles:
       - "Director of Quality Engineering"
       - "Director of QA"
-      - "Director Quality Assurance"
       - "VP of Quality"
-      - "VP Quality Engineering"
-      - "Head of Quality"
+      - "Head of Quality Engineering"
       - "Head of QE"
-    target_experience_years_min: 12
-    typical_company_size: ["mid-size", "enterprise", "late-stage-startup"]
-    notes: >
-      For these roles, Jireh will search and score but pause before applying.
-      Your personal touch on the cover letter matters at this level. Jireh will
-      pre-draft everything and present it to you in the morning digest for review.
 
   path_b:
-    name: "Senior QE Manager / Lead QE Track"
-    description: "Primary track — strong fit, fully automated end-to-end"
+    name: "Primary Track"
+    description: "Strong-fit roles — Nexus applies automatically before the deadline"
     human_approval_required: false
     max_per_day: 15
     score_threshold: 72
     resume_variant: path_b
     auto_apply: true
-    queue_label: "🟢 Auto-Applied"
+    queue_label: "Auto-Applied"
     target_titles:
       - "Senior QE Manager"
       - "QE Manager"
@@ -43,14 +35,7 @@ paths:
       - "Quality Engineering Manager"
       - "Lead QE"
       - "Lead Quality Engineer"
-      - "Principal QE"
       - "Engineering Manager - QA"
-      - "Engineering Manager - Quality"
-    target_experience_years_min: 8
-    typical_company_size: ["startup", "mid-size", "enterprise"]
-    notes: >
-      This is where Jireh runs at full autonomy. Scout → Score → Tailor → Apply,
-      all before 9:15 AM. You wake up, read the digest, and trust the provision.
 
 # ─── Shared scoring signals ───────────────────────────────────────────────────
 scoring_signals:
@@ -58,12 +43,9 @@ scoring_signals:
     - "automation architecture"
     - "test framework"
     - "CI/CD"
-    - "fintech"
-    - "payments"
-    - "QA org"
+    - "quality strategy"
     - "team building"
     - "shift-left"
-    - "quality strategy"
 
   mild_positive:
     - "agile"

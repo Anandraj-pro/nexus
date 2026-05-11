@@ -1,11 +1,11 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "jireh"
-version = "0.1.0"
-description = "Autonomous job-hunt agent system — Jehovah Jireh, The Lord Will Provide"
+name = "nexus"
+version = "1.0.0"
+description = "Autonomous job-hunt agent — connects your skills to the right openings"
 requires-python = ">=3.11"
 readme = "README.md"
 license = { text = "MIT" }
@@ -16,7 +16,6 @@ dependencies = [
 
     # Orchestration
     "langgraph>=0.2.0",
-    "crewai>=0.100.0",
 
     # Web scraping & browser automation
     "playwright>=1.44.0",
@@ -76,7 +75,7 @@ voice = [
 ]
 
 [project.scripts]
-jireh = "orchestrator:cli"
+nexus = "orchestrator:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]

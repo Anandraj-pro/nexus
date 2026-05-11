@@ -1,4 +1,4 @@
-"""jireh-scorer — scores job postings 0-100 against the skills profile using Ollama/Llama."""
+"""nexus-scorer — scores job postings 0-100 against the skills profile using Ollama/Llama."""
 
 from __future__ import annotations
 
@@ -15,23 +15,23 @@ from agents.scout import JobPosting
 
 logger = logging.getLogger(__name__)
 
-SCORER_SYSTEM_PROMPT = """\
-You are jireh-scorer, an expert QA career advisor. Evaluate how well a job description
-matches a candidate's skills profile and return a structured score.
-
-Scoring criteria (weights sum to 1.0):
-  - experience_match (0.30): does the required YoE align with candidate's 17 years?
-  - skills_match (0.35): how many key technical/leadership skills match?
-  - domain_match (0.20): does the industry/domain align with candidate preferences?
-  - seniority_match (0.15): is the role level appropriate (Senior Manager / Director)?
-
-Return ONLY a valid JSON object — no markdown, no code fences, no explanation:
-{"total_score": <int 0-100>, "breakdown": {"experience_match": <int>, "skills_match": <int>, "domain_match": <int>, "seniority_match": <int>}, "matched_skills": [<str>, ...], "missing_skills": [<str>, ...], "path_recommendation": "path_a"|"path_b"|"skip", "reasoning": "<one sentence>"}
-
-path_a = Director/VP level (score >= 60, queued for human approval before submitting)
-path_b = Senior Manager/Lead level (score >= 72, auto-applied immediately)
-skip   = poor fit or below minimum threshold — do not apply
-"""
+def _build_scorer_prompt(experience_years: int) -> str:
+    return (
+        "You are nexus-scorer, an expert QA career advisor. Evaluate how well a job description\n"
+        "matches a candidate's skills profile and return a structured score.\n\n"
+        "Scoring criteria (weights sum to 1.0):\n"
+        f"  - experience_match (0.30): does the required YoE align with candidate's {experience_years} years?\n"
+        "  - skills_match (0.35): how many key technical/leadership skills match?\n"
+        "  - domain_match (0.20): does the industry/domain align with candidate preferences?\n"
+        "  - seniority_match (0.15): is the role level appropriate for the candidate's seniority?\n\n"
+        "Return ONLY a valid JSON object — no markdown, no code fences, no explanation:\n"
+        '{"total_score": <int 0-100>, "breakdown": {"experience_match": <int>, "skills_match": <int>, '
+        '"domain_match": <int>, "seniority_match": <int>}, "matched_skills": [<str>, ...], '
+        '"missing_skills": [<str>, ...], "path_recommendation": "path_a"|"path_b"|"skip", "reasoning": "<one sentence>"}\n\n'
+        "path_a = stretch / senior track (score >= path_a_threshold, queued for human approval)\n"
+        "path_b = primary track (score >= path_b_threshold, auto-applied immediately)\n"
+        "skip   = poor fit or below minimum threshold — do not apply\n"
+    )
 
 
 def _escape_json_strings(text: str) -> str:
@@ -104,7 +104,7 @@ class ScoredJob:
     reasoning: str
 
 
-class JirehScorer:
+class NexusScorer:
     """
     Scores each JobPosting against the candidate's skills profile using Ollama/Llama.
 
@@ -120,6 +120,8 @@ class JirehScorer:
         self._path_b_threshold = config.get("scorer", {}).get("path_b_threshold", 72)
         self._path_a_threshold = config.get("scorer", {}).get("path_a_threshold", 60)
         self._skills_text = json.dumps(skills_profile, indent=2)
+        experience_years = skills_profile.get("profile", {}).get("experience_years", 10)
+        self._system_prompt = _build_scorer_prompt(experience_years)
 
     def _enforce_path(self, score: int) -> str:
         """Config thresholds are the final authority — LLM recommendation is ignored for routing."""
@@ -140,7 +142,7 @@ class JirehScorer:
         )
 
         messages = [
-            {"role": "system", "content": SCORER_SYSTEM_PROMPT},
+            {"role": "system", "content": self._system_prompt},
             {"role": "user", "content": user_content},
         ]
 

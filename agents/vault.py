@@ -1,4 +1,4 @@
-"""jireh-vault — manages credentials and browser sessions securely."""
+"""nexus-vault — manages credentials and browser sessions securely."""
 
 from __future__ import annotations
 
@@ -11,15 +11,15 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # Service name prefix used in the OS keyring
-KEYRING_SERVICE = "jireh"
+KEYRING_SERVICE = "nexus"
 
 
-class JirehVault:
+class NexusVault:
     """
     Central credential manager. Reads from keyring (preferred) with .env fallback.
 
     Usage:
-        vault = JirehVault(config)
+        vault = NexusVault(config)
         creds = vault.get_credentials("linkedin")
         email = creds["email"]
         password = creds["password"]

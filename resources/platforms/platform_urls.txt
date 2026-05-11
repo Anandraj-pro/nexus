@@ -1,6 +1,6 @@
 # ─── Jireh Platform URLs ──────────────────────────────────────────────────────
 # Format: PLATFORM_NAME|BASE_URL|SEARCH_URL_TEMPLATE|API_SUPPORTED
-# {query} and {location} are replaced at runtime by jireh-scout.
+# {query} and {location} are replaced at runtime by nexus-scout.
 
 LINKEDIN|https://www.linkedin.com|https://www.linkedin.com/jobs/search/?keywords={query}&location={location}&f_TPR=r86400|false
 NAUKRI|https://www.naukri.com|https://www.naukri.com/{query}-jobs-in-{location}|false

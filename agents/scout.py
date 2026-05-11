@@ -1,4 +1,4 @@
-"""jireh-scout — discovers new job postings across all configured platforms."""
+"""nexus-scout — discovers new job postings across all configured platforms."""
 
 from __future__ import annotations
 
@@ -16,14 +16,14 @@ from bs4 import BeautifulSoup
 from agents.db import DEFAULT_DB_PATH, init_db, load_seen_fingerprints, save_seen_jobs
 
 if TYPE_CHECKING:
-    from agents.vault import JirehVault
+    from agents.vault import NexusVault
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class JobPosting:
-    """Canonical job posting record produced by jireh-scout."""
+    """Canonical job posting record produced by nexus-scout."""
 
     job_id: str
     title: str
@@ -42,7 +42,7 @@ class JobPosting:
         return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
-class JirehScout:
+class NexusScout:
     """
     Discovers fresh job postings and returns a deduplicated list of JobPosting objects.
 
@@ -55,7 +55,7 @@ class JirehScout:
         config: dict[str, Any],
         seen_fingerprints: set[str] | None = None,
         db_path: Path | None = None,
-        vault: JirehVault | None = None,
+        vault: NexusVault | None = None,
     ):
         self.config = config
         self._vault = vault
@@ -257,7 +257,7 @@ class JirehScout:
         await page.goto("https://www.linkedin.com/login", timeout=30000)
         logger.info(
             "LinkedIn: browser opened — please log in within 2 minutes. "
-            "Jireh will continue automatically once you reach your feed."
+            "Nexus will continue automatically once you reach your feed."
         )
         try:
             # Wait for redirect to feed or any authenticated page
@@ -501,7 +501,7 @@ class JirehScout:
 
         logger.info(
             "Naukri: browser opened — please log in within 5 minutes. "
-            "Jireh will continue automatically once you reach your homepage."
+            "Nexus will continue automatically once you reach your homepage."
         )
         try:
             await page.wait_for_url("**/mnjuser/homepage**", timeout=300_000)

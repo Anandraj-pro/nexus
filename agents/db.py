@@ -1,4 +1,4 @@
-"""jireh-db — sqlite3 persistence for seen job fingerprints."""
+"""nexus-db — sqlite3 persistence for seen job fingerprints."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from agents.scout import JobPosting
 
-DEFAULT_DB_PATH = Path("db/jireh.db")
+DEFAULT_DB_PATH = Path("db/nexus.db")
 
 
 def init_db(db_path: Path = DEFAULT_DB_PATH) -> None:

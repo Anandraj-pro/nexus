@@ -1,34 +1,31 @@
-# ─── Jireh Agent Configuration ────────────────────────────────────────────────
-# Central config for all agents. Override via .env for secrets.
+# ─── Nexus Agent Configuration ────────────────────────────────────────────────
+# Central config for all agents. Run 'python orchestrator.py init' to regenerate.
 
 system:
-  name: Jireh
-  version: "0.1.0"
+  name: Nexus
+  version: "1.0.0"
   timezone: Asia/Kolkata
   log_level: INFO
-  log_file: logs/jireh.log
-  db_path: db/jireh.db
+  log_file: logs/nexus.log
+  db_path: db/nexus.db
 
 # ─── Schedule ─────────────────────────────────────────────────────────────────
 schedule:
-  scout_start: "05:00"       # IST — jireh-scout wakes up
-  apply_deadline: "09:15"    # IST — hard cutoff for all submissions
-  reporter_send: "09:30"     # IST — daily digest sent
+  scout_start: "05:00"       # pipeline wakes up
+  apply_deadline: "09:15"    # hard cutoff — no submissions after this
   scout_interval_minutes: 30 # re-check for new postings every 30 min until deadline
 
 # ─── LLM ──────────────────────────────────────────────────────────────────────
 llm:
   provider: ollama
   base_url: http://localhost:11434
-  scorer_model: llama3.2        # fast, lightweight — used for scoring
-  tailor_model: llama3.1:8b    # smarter — used for resume/cover-letter rewriting
+  scorer_model: llama3.2     # fast, lightweight — used for scoring
   temperature: 0.3
 
-# ─── jireh-scout ──────────────────────────────────────────────────────────────
+# ─── nexus-scout ──────────────────────────────────────────────────────────────
 scout:
   enabled: true
   platforms:
-    - linkedin
     - naukri
     - greenhouse
     - lever
@@ -40,8 +37,6 @@ scout:
     - "Quality Engineering Manager"
     - "Director Quality Assurance"
     - "Head of Quality Engineering"
-    - "VP Quality"
-    - "Engineering Manager QA"
   locations:
     - "Hyderabad"
     - "Remote"
@@ -52,14 +47,14 @@ scout:
     - "junior"
     - "associate"
   max_jobs_per_run: 100
-  deduplicate: true  # skip already-seen job IDs
+  deduplicate: true
 
-# ─── jireh-scorer ─────────────────────────────────────────────────────────────
+# ─── nexus-scorer ─────────────────────────────────────────────────────────────
 scorer:
   enabled: true
   score_range: [0, 100]
   path_b_threshold: 72     # auto-apply if score >= this
-  path_a_threshold: 60     # add to human queue if score >= this
+  path_a_threshold: 60     # queue for human review if score >= this
   below_threshold_action: skip
   scoring_weights:
     experience_match: 0.30
@@ -67,52 +62,42 @@ scorer:
     domain_match: 0.20
     seniority_match: 0.15
 
-# ─── jireh-tailor ─────────────────────────────────────────────────────────────
+# ─── nexus-tailor ─────────────────────────────────────────────────────────────
 tailor:
   enabled: true
   resume_template_path_a: resources/resumes/resume_path_a.md
   resume_template_path_b: resources/resumes/resume_path_b.md
-  cover_letter_template_path_a: resources/templates/cover_letter_path_a.md
-  cover_letter_template_path_b: resources/templates/cover_letter_path_b.md
   output_dir: resources/resumes/tailored/
-  max_resume_words: 800
-  include_cover_letter: true
 
-# ─── jireh-apply ──────────────────────────────────────────────────────────────
+# ─── nexus-apply ──────────────────────────────────────────────────────────────
 apply:
   enabled: true
-  # When false, logs actions but does not actually submit (dry-run)
-  live_mode: true
+  live_mode: false           # set true only after testing — this submits real applications
   browser: chromium
   headless: true
-  slow_mo_ms: 50           # slight delay between actions to appear human-like
+  slow_mo_ms: 50
   timeout_ms: 30000
   retry_attempts: 2
   on_captcha: skip_and_flag  # options: skip_and_flag | pause_for_human | abort
+  candidate_experience_years: 10  # used to fill experience fields in apply forms
 
-# ─── jireh-reporter ───────────────────────────────────────────────────────────
+# ─── nexus-reporter ───────────────────────────────────────────────────────────
 reporter:
   enabled: true
   channels:
     - telegram
     - email
-  include_sections:
-    - summary_stats
-    - path_a_queue      # jobs needing human approval
-    - path_b_applied    # auto-submitted applications
-    - skipped_jobs      # flagged for CAPTCHA / low score
-    - encouragement     # daily scripture / affirmation
 
-# ─── jireh-voice ──────────────────────────────────────────────────────────────
+# ─── nexus-voice ──────────────────────────────────────────────────────────────
 voice:
-  whisper_model: base      # tiny (75MB/fast) | base (145MB) | small (460MB/accurate)
-  tts_rate: 170            # words per minute for text-to-speech
-  silence_threshold: 0.015 # RMS amplitude below this = silence
-  silence_secs: 1.5        # seconds of silence after speech to stop recording
+  whisper_model: base
+  tts_rate: 170
+  silence_threshold: 0.015
+  silence_secs: 1.5
 
-# ─── jireh-vault ──────────────────────────────────────────────────────────────
+# ─── nexus-vault ──────────────────────────────────────────────────────────────
 vault:
-  credential_backend: keyring  # options: keyring | env | aws_secrets
+  credential_backend: keyring
   session_dir: resources/credentials/sessions/
   rotate_sessions: true
   max_session_age_hours: 24
