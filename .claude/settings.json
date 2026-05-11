@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git log*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git remote*)",
+      "Bash(pytest*)",
+      "Bash(ruff*)",
+      "Bash(mypy*)",
+      "PowerShell(git log*)",
+      "PowerShell(git status*)",
+      "PowerShell(git diff*)",
+      "PowerShell(git show*)",
+      "PowerShell(git branch*)",
+      "PowerShell(git remote*)",
+      "PowerShell(git add*)",
+      "PowerShell(git commit*)",
+      "PowerShell(git push*)",
+      "PowerShell(git rm*)",
+      "PowerShell(git filter-repo*)",
+      "PowerShell(pytest*)",
+      "PowerShell(ruff*)",
+      "PowerShell(mypy*)",
+      "PowerShell(pip install*)",
+      "PowerShell(Get-Content*)",
+      "PowerShell(Get-ChildItem*)",
+      "PowerShell(& \"D:\\jireh\\.venv\\Scripts\\pip.exe\"*)",
+      "PowerShell(& \"D:\\jireh\\.venv\\Scripts\\python.exe\" orchestrator.py status*)",
+      "PowerShell(& \"D:\\jireh\\.venv\\Scripts\\python.exe\" orchestrator.py run --dry-run*)"
+    ]
+  }
+}
