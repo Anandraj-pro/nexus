@@ -6,6 +6,8 @@ Nexus is a fully autonomous job-hunting pipeline that runs every morning and app
 
 ---
 
+> New user? Follow the **[Setup Runbook](docs/runbook.md)** — from zero to first run in ~20 minutes.
+
 ## How It Works
 
 ```
