@@ -1,101 +1,75 @@
-# ─── Nexus Agent Configuration ────────────────────────────────────────────────
-# Central config for all agents. Run 'python orchestrator.py init' to regenerate.
+# ─── Nexus Agent Configuration ──────────────────────────────────────────────
 
 system:
   name: Nexus
-  version: "1.0.0"
+  version: 1.0.0
   timezone: Asia/Kolkata
   log_level: INFO
   log_file: logs/nexus.log
   db_path: db/nexus.db
-
-# ─── Schedule ─────────────────────────────────────────────────────────────────
 schedule:
-  scout_start: "05:00"       # pipeline wakes up
-  apply_deadline: "09:15"    # hard cutoff — no submissions after this
-  scout_interval_minutes: 30 # re-check for new postings every 30 min until deadline
-
-# ─── LLM ──────────────────────────────────────────────────────────────────────
+  scout_start: 05:00
+  apply_deadline: 09:15
+  scout_interval_minutes: 30
 llm:
   provider: ollama
   base_url: http://localhost:11434
-  scorer_model: llama3.2     # fast, lightweight — used for scoring
+  scorer_model: llama3.2
   temperature: 0.3
-
-# ─── nexus-scout ──────────────────────────────────────────────────────────────
 scout:
   enabled: true
   platforms:
-    - naukri
-    - greenhouse
-    - lever
-    - indeed
+  - naukri
+  - greenhouse
+  - lever
+  - indeed
   keywords:
-    - "Senior QE Manager"
-    - "Lead QE"
-    - "QA Manager"
-    - "Quality Engineering Manager"
-    - "Director Quality Assurance"
-    - "Head of Quality Engineering"
+  - Senior QE Manager
   locations:
-    - "Hyderabad"
-    - "Remote"
-    - "India Remote"
+  - Hyderabad
+  - Remote
   exclude_keywords:
-    - "fresher"
-    - "0-2 years"
-    - "junior"
-    - "associate"
+  - fresher
   max_jobs_per_run: 100
   deduplicate: true
-
-# ─── nexus-scorer ─────────────────────────────────────────────────────────────
 scorer:
   enabled: true
-  score_range: [0, 100]
-  path_b_threshold: 72     # auto-apply if score >= this
-  path_a_threshold: 60     # queue for human review if score >= this
+  score_range:
+  - 0
+  - 100
+  path_b_threshold: 72
+  path_a_threshold: 60
   below_threshold_action: skip
   scoring_weights:
-    experience_match: 0.30
+    experience_match: 0.3
     skills_match: 0.35
-    domain_match: 0.20
+    domain_match: 0.2
     seniority_match: 0.15
-
-# ─── nexus-tailor ─────────────────────────────────────────────────────────────
 tailor:
   enabled: true
   resume_template_path_a: resources/resumes/resume_path_a.md
   resume_template_path_b: resources/resumes/resume_path_b.md
   output_dir: resources/resumes/tailored/
-
-# ─── nexus-apply ──────────────────────────────────────────────────────────────
 apply:
   enabled: true
-  live_mode: false           # set true only after testing — this submits real applications
+  live_mode: false
   browser: chromium
   headless: true
   slow_mo_ms: 50
   timeout_ms: 30000
   retry_attempts: 2
-  on_captcha: skip_and_flag  # options: skip_and_flag | pause_for_human | abort
-  candidate_experience_years: 10  # used to fill experience fields in apply forms
-
-# ─── nexus-reporter ───────────────────────────────────────────────────────────
+  on_captcha: skip_and_flag
+  candidate_experience_years: 17
 reporter:
   enabled: true
   channels:
-    - telegram
-    - email
-
-# ─── nexus-voice ──────────────────────────────────────────────────────────────
+  - telegram
+  - email
 voice:
   whisper_model: base
   tts_rate: 170
   silence_threshold: 0.015
   silence_secs: 1.5
-
-# ─── nexus-vault ──────────────────────────────────────────────────────────────
 vault:
   credential_backend: keyring
   session_dir: resources/credentials/sessions/

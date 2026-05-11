@@ -1,109 +1,147 @@
-# ─── Nexus Skills Profile ─────────────────────────────────────────────────────
-# This file is the single source of truth for the Scorer agent.
-# Rate each skill 1–10. The Scorer weights these against job requirements.
-# Run 'python orchestrator.py init' to regenerate from scratch.
+# ─── Nexus Skills Profile ────────────────────────────────────────────────────
+# Rate each skill 1–10. The Scorer uses these weights against job requirements.
 
 profile:
-  name: Your Full Name
-  title: Senior QE Manager
-  location: Your City, Country
-  experience_years: 10
-  email: you@email.com
-
-summary: >
-  10-year QE professional with experience in automation-first quality engineering.
-  Update this summary to reflect your actual background and strengths.
-
-# ─── Leadership & Strategy ────────────────────────────────────────────────────
-leadership:
-  team_building:
-    rating: 7
-    keywords: ["team building", "hiring", "QA org", "quality engineering org"]
-  strategy:
-    rating: 7
-    keywords: ["quality strategy", "test strategy", "QA roadmap"]
-  stakeholder_management:
-    rating: 7
-    keywords: ["stakeholder", "executive reporting", "OKR"]
-  cross_functional:
-    rating: 7
-    keywords: ["cross-functional", "product", "PM alignment"]
-  agile_scrum:
-    rating: 7
-    keywords: ["agile", "scrum", "sprint", "kanban"]
-
-# ─── QA Engineering ───────────────────────────────────────────────────────────
-qa_engineering:
-  test_automation:
-    rating: 7
-    keywords: ["automation architecture", "test framework", "automation strategy"]
-  api_testing:
-    rating: 7
-    keywords: ["API testing", "REST", "GraphQL", "Postman"]
-  ui_automation:
-    rating: 7
-    keywords: ["UI automation", "Selenium", "Playwright", "Cypress"]
-  performance_testing:
-    rating: 6
-    keywords: ["performance testing", "load testing", "JMeter", "k6"]
-  shift_left:
-    rating: 7
-    keywords: ["shift-left", "TDD", "BDD", "ATDD"]
-
-# ─── CI/CD & DevOps ───────────────────────────────────────────────────────────
-cicd_devops:
-  cicd_pipeline:
-    rating: 7
-    keywords: ["CI/CD", "pipeline", "continuous integration"]
-  github_actions:
-    rating: 7
-    keywords: ["GitHub Actions", "workflow"]
-  docker:
-    rating: 6
-    keywords: ["Docker", "containerization"]
-  aws:
-    rating: 5
-    keywords: ["AWS", "cloud"]
-
-# ─── Tools ────────────────────────────────────────────────────────────────────
-tools:
-  selenium:
-    rating: 7
-    keywords: ["Selenium", "WebDriver"]
-  pytest:
-    rating: 7
-    keywords: ["pytest", "Python testing"]
-  jira:
-    rating: 7
-    keywords: ["Jira", "issue tracking"]
-  postman:
-    rating: 7
-    keywords: ["Postman", "API client"]
-
-# ─── Programming Languages ────────────────────────────────────────────────────
-languages:
-  python:
-    rating: 7
-    keywords: ["Python", "scripting"]
-  java:
-    rating: 6
-    keywords: ["Java", "Maven"]
-  sql:
-    rating: 7
-    keywords: ["SQL", "database testing"]
-
-# ─── Soft Skills ──────────────────────────────────────────────────────────────
-soft_skills:
-  communication:
-    rating: 8
-    keywords: ["communication", "presentation", "stakeholder"]
-  mentoring:
-    rating: 8
-    keywords: ["mentoring", "coaching", "career development"]
-
-# ─── Target preferences ───────────────────────────────────────────────────────
+  name: ANANDA RAJU PANDIRI
+  title: QE Manager
+  location: Hyderabad, India
+  experience_years: 17
+  email: anandrajpandiri@gmail.com
+summary: 17-year QE leader.
 preferences:
-  preferred_locations: ["Remote", "Your City"]
+  preferred_locations:
+  - Hyderabad
+  - Remote
   remote_ok: true
   relocation_ok: false
   notice_period_days: 30
+leadership:
+  team_building:
+    rating: 9
+    keywords:
+    - team building
+    - hiring
+    - QA org
+  strategy:
+    rating: 5
+    keywords:
+    - quality strategy
+    - test strategy
+    - QA roadmap
+  stakeholder_management:
+    rating: 5
+    keywords:
+    - stakeholder
+    - executive reporting
+    - OKR
+  cross_functional:
+    rating: 5
+    keywords:
+    - cross-functional
+    - PM alignment
+  agile_scrum:
+    rating: 5
+    keywords:
+    - agile
+    - scrum
+    - sprint
+    - kanban
+qa_engineering:
+  test_automation:
+    rating: 10
+    keywords:
+    - automation architecture
+    - test framework
+  api_testing:
+    rating: 5
+    keywords:
+    - API testing
+    - REST
+    - GraphQL
+    - Postman
+  ui_automation:
+    rating: 5
+    keywords:
+    - UI automation
+    - Selenium
+    - Playwright
+  performance_testing:
+    rating: 5
+    keywords:
+    - performance testing
+    - JMeter
+    - k6
+  shift_left:
+    rating: 5
+    keywords:
+    - shift-left
+    - TDD
+    - BDD
+cicd_devops:
+  cicd_pipeline:
+    rating: 5
+    keywords:
+    - CI/CD
+    - continuous integration
+  github_actions:
+    rating: 5
+    keywords:
+    - GitHub Actions
+  docker:
+    rating: 5
+    keywords:
+    - Docker
+    - containerization
+  aws:
+    rating: 4
+    keywords:
+    - AWS
+    - cloud
+tools:
+  selenium:
+    rating: 5
+    keywords:
+    - Selenium
+    - WebDriver
+  pytest:
+    rating: 5
+    keywords:
+    - pytest
+    - Python testing
+  jira:
+    rating: 5
+    keywords:
+    - Jira
+    - issue tracking
+  postman:
+    rating: 5
+    keywords:
+    - Postman
+    - API client
+languages:
+  python:
+    rating: 9
+    keywords:
+    - Python
+    - scripting
+  java:
+    rating: 5
+    keywords:
+    - Java
+    - Maven
+  sql:
+    rating: 5
+    keywords:
+    - SQL
+    - database testing
+soft_skills:
+  communication:
+    rating: 5
+    keywords:
+    - communication
+    - presentation
+  mentoring:
+    rating: 9
+    keywords:
+    - mentoring
+    - coaching

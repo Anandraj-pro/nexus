@@ -21,15 +21,20 @@ This directory contains all BMAD agent definitions, tasks, templates, checklists
 - [pm](agents/pm.md) — Michael, Product Manager
 - [po](agents/po.md) — Sarah, Product Owner
 - [qa](agents/qa.md) — Quinn, QA Engineer
+- [resume-agent](agents/resume-agent.md) — Ria, Career Intelligence & Resume Specialist
 - [sm](agents/sm.md) — Alex, Scrum Master
 - [ux-expert](agents/ux-expert.md) — Aria, UX Designer
 - [bmad-master](agents/bmad-master.md) — BMad, Universal Expert
 - [bmad-orchestrator](agents/bmad-orchestrator.md) — Orchestrator
 
 ## Tasks
+- [ats-check](tasks/ats-check.md) — ATS keyword gap analysis and score
 - [create-doc](tasks/create-doc.md)
-- [execute-checklist](tasks/execute-checklist.md)
 - [document-project](tasks/document-project.md)
+- [execute-checklist](tasks/execute-checklist.md)
+- [resume-review](tasks/resume-review.md) — scored 6-dimension resume critique
+- [resume-to-form](tasks/resume-to-form.md) — extract profile YAML from resume text
+- [resume-write](tasks/resume-write.md) — guided resume writing/rewriting
 - [shard-doc](tasks/shard-doc.md)
 
 ## Templates
